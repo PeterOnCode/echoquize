@@ -102,3 +102,80 @@ def get_generation(gid: str) -> dict | None:
         cur = _get_conn().execute("SELECT * FROM generations WHERE id = ?", (gid,))
         row = cur.fetchone()
     return dict(row) if row else None
+
+
+def list_generations(
+    limit: int = 50, offset: int = 0, voice: str | None = None
+) -> list[dict]:
+    """Return a page of generations, newest first, optionally filtered by voice."""
+    query = "SELECT * FROM generations"
+    params: list = []
+    if voice:
+        query += " WHERE voice = ?"
+        params.append(voice)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([int(limit), int(offset)])
+    with _lock:
+        rows = _get_conn().execute(query, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def count_generations(voice: str | None = None) -> int:
+    """Total number of generations (optionally filtered by voice)."""
+    query = "SELECT COUNT(*) AS n FROM generations"
+    params: list = []
+    if voice:
+        query += " WHERE voice = ?"
+        params.append(voice)
+    with _lock:
+        return _get_conn().execute(query, params).fetchone()["n"]
+
+
+def delete_generation(gid: str) -> str | None:
+    """Delete one row; return its file_path so the caller can remove the file."""
+    with _lock:
+        conn = _get_conn()
+        row = conn.execute(
+            "SELECT file_path FROM generations WHERE id = ?", (gid,)
+        ).fetchone()
+        if row is None:
+            return None
+        conn.execute("DELETE FROM generations WHERE id = ?", (gid,))
+        conn.commit()
+    return row["file_path"]
+
+
+def bulk_delete(
+    voice: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> list[str]:
+    """Delete all rows matching the filter; return their file_paths.
+
+    ``date_from``/``date_to`` are ISO-8601 strings compared against ``created_at``
+    (which sorts lexicographically). With no filter, deletes everything — callers
+    must require explicit confirmation.
+    """
+    clauses: list[str] = []
+    params: list = []
+    if voice:
+        clauses.append("voice = ?")
+        params.append(voice)
+    if date_from:
+        clauses.append("created_at >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("created_at <= ?")
+        params.append(date_to)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    with _lock:
+        conn = _get_conn()
+        paths = [
+            r["file_path"]
+            for r in conn.execute(
+                f"SELECT file_path FROM generations{where}", params
+            ).fetchall()
+        ]
+        conn.execute(f"DELETE FROM generations{where}", params)
+        conn.commit()
+    return paths

@@ -77,12 +77,12 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Independent Test**: Batch 3 texts → 3 files in one zip; open Library → all past generations listed, filter by voice, delete one, restart app → library still populated.
 
-- [ ] T015 [P] [US2] Extend `src/db/database.py` with `list_generations(limit=50, offset=0, voice=None)` (ORDER BY `created_at` DESC), `count_generations(voice=None)`, `delete_generation(id)` (returns `file_path`), and `bulk_delete(voice=None, date_from=None, date_to=None)` (returns `file_paths`) per `contracts/database.md`
-- [ ] T016 [US2] Add the Batch section to `src/ui/generate_tab.py`: `gr.Dataframe` queue, Add-to-Queue, Remove-Selected, Generate-All with `gr.Progress`, `gr.File` zip download; queue held in `gr.State`; validate each item ≤4096 (per item, not total) — depends on T013
-- [ ] T017 [US2] Implement the Generate-All handler in `src/ui/generate_tab.py`: for each queued item `generate_speech` → `get_storage().save` → `insert_generation`, then bundle all outputs into one zip for download — depends on T016
-- [ ] T018 [US2] Build the Library tab in `src/ui/library_tab.py`: paginated `gr.Dataframe` (ID, Created, Voice, Model, Format, Speed, Text preview 60 chars, File Size) via `list_generations`, Voice filter dropdown, Refresh, page controls, row-select → `gr.Audio` preview — depends on T015
-- [ ] T019 [US2] Implement Library deletion in `src/ui/library_tab.py`: Delete Selected → `delete_generation` + `get_storage().delete`; Bulk cleanup (date range and/or voice) → confirmation → `bulk_delete` + remove returned files — depends on T015, T018
-- [ ] T020 [US2] Mount the Library tab in `app.py` and refresh it after each generation — depends on T014, T018
+- [X] T015 [P] [US2] Extend `src/db/database.py` with `list_generations(limit=50, offset=0, voice=None)` (ORDER BY `created_at` DESC), `count_generations(voice=None)`, `delete_generation(id)` (returns `file_path`), and `bulk_delete(voice=None, date_from=None, date_to=None)` (returns `file_paths`) per `contracts/database.md`
+- [X] T016 [US2] Add the Batch section to `src/ui/generate_tab.py`: `gr.Dataframe` queue, Add-to-Queue, Remove-Selected, Generate-All with `gr.Progress`, `gr.File` zip download; queue held in `gr.State`; validate each item ≤4096 (per item, not total) — depends on T013
+- [X] T017 [US2] Implement the Generate-All handler in `src/ui/generate_tab.py`: for each queued item `generate_speech` → `get_storage().save` → `insert_generation`, then bundle all outputs into one zip for download — depends on T016
+- [X] T018 [US2] Build the Library tab in `src/ui/library_tab.py`: paginated `gr.Dataframe` (ID, Created, Voice, Model, Format, Speed, Text preview 60 chars, File Size) via `list_generations`, Voice filter dropdown, Refresh, page controls, row-select → `gr.Audio` preview — depends on T015
+- [X] T019 [US2] Implement Library deletion in `src/ui/library_tab.py`: Delete Selected → `delete_generation` + `get_storage().delete`; Bulk cleanup (date range and/or voice) → confirmation → `bulk_delete` + remove returned files — depends on T015, T018
+- [X] T020 [US2] Mount the Library tab in `app.py` and refresh it after each generation — depends on T014, T018
 
 **Checkpoint (manual)**: Run `quickstart.md` → US2 (including restart-persistence and ~1,000-row responsiveness).
 
