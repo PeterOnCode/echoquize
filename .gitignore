@@ -15,3 +15,4 @@ audio/
 data/
 echoquize.db
 # NOTE: do NOT ignore uv.lock — it is committed for reproducible builds.
+.agents/
