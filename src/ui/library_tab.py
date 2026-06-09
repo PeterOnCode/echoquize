@@ -59,14 +59,18 @@ def _on_select(records, evt: gr.SelectData):
 
 
 def _delete_selected(selected_id, page, voice_filter):
-    view, info, records, page = reload_page(page, voice_filter)
     if not selected_id:
+        view, info, records, page = reload_page(page, voice_filter)
         return view, info, records, page, "❌ Select a row first."
-    path = delete_generation(selected_id)
-    if path:
-        get_storage().delete(path)
+    try:
+        path = delete_generation(selected_id)
+        if path:
+            get_storage().delete(path)
+        status = "✅ Deleted."
+    except Exception as exc:  # never leak a traceback to the user
+        status = f"❌ Failed to delete ({type(exc).__name__})."
     view, info, records, page = reload_page(page, voice_filter)
-    return view, info, records, page, "✅ Deleted."
+    return view, info, records, page, status
 
 
 def _norm_dates(date_from, date_to):
@@ -82,12 +86,16 @@ def _bulk_clean(confirm, bulk_voice, date_from, date_to, voice_filter):
         view, info, records, page = reload_page(0, voice_filter)
         return view, info, records, page, "❌ Tick 'Confirm' before bulk-deleting."
     df_, dt = _norm_dates(date_from, date_to)
-    paths = bulk_delete(voice=_voice_arg(bulk_voice), date_from=df_, date_to=dt)
-    storage = get_storage()
-    for p in paths:
-        storage.delete(p)
+    try:
+        paths = bulk_delete(voice=_voice_arg(bulk_voice), date_from=df_, date_to=dt)
+        storage = get_storage()
+        for p in paths:
+            storage.delete(p)
+        status = f"✅ Bulk-deleted {len(paths)} item(s)."
+    except Exception as exc:  # never leak a traceback to the user
+        status = f"❌ Bulk delete failed ({type(exc).__name__})."
     view, info, records, page = reload_page(0, voice_filter)
-    return view, info, records, page, f"✅ Bulk-deleted {len(paths)} item(s)."
+    return view, info, records, page, status
 
 
 def build_library_tab():
