@@ -94,10 +94,10 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Independent Test**: Generate an mp3 with Title+Artist → tags visible in VLC; edit a tag in Library → persists after restart; pcm with tags → completes with a "skipped" notice.
 
-- [ ] T021 [P] [US3] Implement `src/tags/writer.py`: `write_tags(path, fmt, tags)` + `TagsNotSupportedError`; map mp3→`EasyID3` (year→`date`), wav→`WAVE`+ID3, flac→`FLAC`, opus→`OggOpus`; handle `ID3NoHeaderError`; raise for `pcm`; treat `aac` as unsupported per `contracts/tag-writer.md`
-- [ ] T022 [P] [US3] Add `update_tags(id, tags)` to `src/db/database.py`
-- [ ] T023 [US3] Add an Audio Tags accordion (Title/Artist/Album/Comment/Genre/Year, closed by default) to `src/ui/generate_tab.py`; after saving the file, call `write_tags` when any tag is set and the format is taggable; `pcm`/`aac` → status notice but still complete; persist tag values via `insert_generation` — depends on T013, T021, T022
-- [ ] T024 [US3] Add an Edit Tags panel to `src/ui/library_tab.py`: six fields pre-filled on row-select; Save Tags → `write_tags` + `update_tags`; Clear Tags → write empty + clear DB; disable Save for `pcm`/`aac` with a notice — depends on T018, T021, T022
+- [X] T021 [P] [US3] Implement `src/tags/writer.py`: `write_tags(path, fmt, tags)` + `TagsNotSupportedError`; map mp3→`EasyID3` (year→`date`), wav→`WAVE`+ID3, flac→`FLAC`, opus→`OggOpus`; handle `ID3NoHeaderError`; raise for `pcm`; treat `aac` as unsupported per `contracts/tag-writer.md`
+- [X] T022 [P] [US3] Add `update_tags(id, tags)` to `src/db/database.py`
+- [X] T023 [US3] Add an Audio Tags accordion (Title/Artist/Album/Comment/Genre/Year, closed by default) to `src/ui/generate_tab.py`; after saving the file, call `write_tags` when any tag is set and the format is taggable; `pcm`/`aac` → status notice but still complete; persist tag values via `insert_generation` — depends on T013, T021, T022
+- [X] T024 [US3] Add an Edit Tags panel to `src/ui/library_tab.py`: six fields pre-filled on row-select; Save Tags → `write_tags` + `update_tags`; Clear Tags → write empty + clear DB; disable Save for `pcm`/`aac` with a notice — depends on T018, T021, T022
 
 **Checkpoint (manual)**: Run `quickstart.md` → US3.
 

@@ -107,6 +107,28 @@ def get_generation(gid: str) -> dict | None:
     return dict(row) if row else None
 
 
+def update_tags(gid: str, tags: dict) -> None:
+    """Replace the six tag_* columns for one generation (FR-013).
+
+    Missing/empty keys are stored as NULL so the record stays in sync with the
+    file when tags are cleared.
+    """
+    def _val(key: str) -> str | None:
+        return str(tags.get(key) or "").strip() or None
+
+    with _lock:
+        conn = _get_conn()
+        conn.execute(
+            "UPDATE generations SET tag_title = ?, tag_artist = ?, tag_album = ?, "
+            "tag_comment = ?, tag_genre = ?, tag_year = ? WHERE id = ?",
+            (
+                _val("title"), _val("artist"), _val("album"),
+                _val("comment"), _val("genre"), _val("year"), gid,
+            ),
+        )
+        conn.commit()
+
+
 def list_generations(
     limit: int = 50, offset: int = 0, voice: str | None = None
 ) -> list[dict]:

@@ -9,6 +9,7 @@ import gradio as gr
 
 from src.db.database import insert_generation
 from src.storage import get_storage
+from src.tags.writer import TagsNotSupportedError, write_tags
 from src.tts.client import MAX_CHARS, TTSError, generate_speech
 
 VOICE_CHOICES = [
@@ -18,6 +19,7 @@ VOICE_CHOICES = [
 MODEL_CHOICES = ["tts-1", "tts-1-hd", "gpt-4o-mini-tts"]
 FORMAT_CHOICES = ["mp3", "opus", "aac", "flac", "wav", "pcm"]
 NO_PREVIEW = {"pcm"}  # raw bytes — no inline player
+NO_TAGS = {"pcm", "aac"}  # no usable tag container (FR-014)
 
 QUEUE_HEADERS = ["#", "Text", "Voice", "Model", "Format", "Speed"]
 
@@ -25,14 +27,37 @@ QUEUE_HEADERS = ["#", "Text", "Voice", "Model", "Format", "Speed"]
 # --------------------------------------------------------------------------- #
 # Single generation
 # --------------------------------------------------------------------------- #
-def _on_generate(text, voice, model, fmt, speed, instructions):
-    """Validate, synthesize, save, persist; return (preview, download, status)."""
+def _collect_tags(title, artist, album, comment, genre, year):
+    raw = {
+        "title": title, "artist": artist, "album": album,
+        "comment": comment, "genre": genre, "year": year,
+    }
+    return {k: ((v or "").strip() or None) for k, v in raw.items()}
+
+
+def _apply_tags(path, fmt, tags):
+    """Best-effort: tag the saved file. Never blocks the generation. Returns a status note."""
+    if not any((v or "").strip() for v in tags.values()):
+        return ""
+    try:
+        write_tags(path, fmt, tags)
+        return " Tags written."
+    except TagsNotSupportedError:
+        return f" Tags not supported for {fmt} — skipped."
+    except Exception as exc:  # never leak a traceback to the user
+        return f" Tags could not be written ({type(exc).__name__})."
+
+
+def _on_generate(text, voice, model, fmt, speed, instructions,
+                 t_title, t_artist, t_album, t_comment, t_genre, t_year):
+    """Validate, synthesize, save, tag, persist; return (preview, download, status)."""
     text = (text or "").strip()
     if not text:
         return None, None, "❌ Text is required."
     if len(text) > MAX_CHARS:
         return None, None, f"❌ Text exceeds {MAX_CHARS} characters (got {len(text)})."
 
+    tags = _collect_tags(t_title, t_artist, t_album, t_comment, t_genre, t_year)
     try:
         storage = get_storage()
         audio = generate_speech(text, model, voice, fmt, float(speed), instructions)
@@ -41,6 +66,9 @@ def _on_generate(text, voice, model, fmt, speed, instructions):
             {
                 "text_input": text, "voice": voice, "model": model, "format": fmt,
                 "speed": float(speed), "file_path": path, "file_size": len(audio),
+                "tag_title": tags["title"], "tag_artist": tags["artist"],
+                "tag_album": tags["album"], "tag_comment": tags["comment"],
+                "tag_genre": tags["genre"], "tag_year": tags["year"],
             }
         )
         url = storage.get_url(path)  # locator for Gradio — never the raw backend path
@@ -49,9 +77,10 @@ def _on_generate(text, voice, model, fmt, speed, instructions):
     except Exception as exc:  # safety net — never leak a traceback to the user
         return None, None, f"❌ Unexpected error ({type(exc).__name__})."
 
+    tag_note = _apply_tags(path, fmt, tags)  # post-save; a tag hiccup never loses the file
     status = (
         f"✅ Generated {len(audio) / 1024:.1f} KB — saved as "
-        f"{os.path.basename(path)} (id {gid[:8]})."
+        f"{os.path.basename(path)} (id {gid[:8]})." + tag_note
     )
     if fmt in NO_PREVIEW:
         return None, url, status + " Inline preview is unavailable for PCM — download only."
@@ -174,6 +203,18 @@ def build_generate_tab():
                 instructions = gr.Textbox(
                     label="Voice instructions (gpt-4o-mini-tts only)", lines=2, visible=False
                 )
+                with gr.Accordion("Audio tags (optional)", open=False):
+                    gr.Markdown("Embedded into the file when the format supports it. "
+                                "PCM and AAC can't carry tags — they're skipped with a note.")
+                    with gr.Row():
+                        t_title = gr.Textbox(label="Title", max_lines=1)
+                        t_artist = gr.Textbox(label="Artist", max_lines=1)
+                    with gr.Row():
+                        t_album = gr.Textbox(label="Album", max_lines=1)
+                        t_genre = gr.Textbox(label="Genre", max_lines=1)
+                    with gr.Row():
+                        t_year = gr.Textbox(label="Year", max_lines=1)
+                        t_comment = gr.Textbox(label="Comment", max_lines=1)
                 generate_btn = gr.Button("Generate", variant="primary")
             with gr.Column():
                 audio_out = gr.Audio(label="Preview", type="filepath")
@@ -184,7 +225,8 @@ def build_generate_tab():
         model.change(_toggle_instructions, inputs=model, outputs=instructions)
         gen_event = generate_btn.click(
             _on_generate,
-            inputs=[text, voice, model, fmt, speed, instructions],
+            inputs=[text, voice, model, fmt, speed, instructions,
+                    t_title, t_artist, t_album, t_comment, t_genre, t_year],
             outputs=[audio_out, file_out, status],
         )
 
