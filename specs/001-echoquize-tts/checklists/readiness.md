@@ -13,52 +13,52 @@ question and the spec likely needs a fix before planning — not that code is br
 
 ## Operations & Deployment Requirements Quality
 
-- [ ] CHK001 Are the required-vs-optional configuration values enumerated explicitly (which keys MUST be present at startup, which have defaults)? [Completeness, Spec §FR-015, §FR-016]
-- [ ] CHK002 Is "fail immediately with a clear message" for missing required config defined with observable criteria (what message, surfaced where, before vs after first request)? [Clarity, Spec §FR-016]
+- [x] CHK001 Are the required-vs-optional configuration values enumerated explicitly (which keys MUST be present at startup, which have defaults)? [Completeness, Spec §FR-015, §FR-016]
+- [x] CHK002 Is "fail immediately with a clear message" for missing required config defined with observable criteria (what message, surfaced where, before vs after first request)? [Clarity, Spec §FR-016]
 - [ ] CHK003 Is the set of runtime-configurable settings consistent between FR-015 and the US4 deployment narrative (no setting named in one and missing in the other)? [Consistency, Spec §FR-015, §US4]
 - [ ] CHK004 Is the "under 15 minutes" deployment target tied to a defined starting state (fresh host) and a documented, ordered step list it can be measured against? [Measurability, Spec §SC-006]
-- [ ] CHK005 Do persistence requirements explicitly cover BOTH audio files and history/records across restart, rebuild, AND redeploy (not only "restart")? [Completeness, Spec §FR-018, §SC-008]
+- [x] CHK005 Do persistence requirements explicitly cover BOTH audio files and history/records across restart, rebuild, AND redeploy (not only "restart")? [Completeness, Spec §FR-018, §SC-008]
 - [ ] CHK006 Is "explicit, deliberate purge" defined precisely enough to distinguish it from normal teardown in an acceptance test? [Clarity, Spec §FR-018]
 - [ ] CHK007 Does the spec define required behavior when the persistence location is missing, unwritable, or on an unsupported filesystem at startup? [Gap, Edge Case]
 - [ ] CHK008 Is optional single-owner auth fully specified for both states (unset → open, set → required), including how the credential is supplied? [Completeness, Spec §FR-017]
 
 ## Storage & Data Lifecycle Requirements Quality
 
-- [ ] CHK009 Are the attributes of a Generation Record enumerated completely, or does "at minimum" leave the full set undefined? [Completeness, Spec §FR-006, §Key Entities]
+- [x] CHK009 Are the attributes of a Generation Record enumerated completely, or does "at minimum" leave the full set undefined? [Completeness, Spec §FR-006, §Key Entities]
 - [ ] CHK010 Is "paginated" quantified (page size, default ordering, how filtering interacts with paging) or left ambiguous? [Ambiguity, Spec §FR-009]
 - [ ] CHK011 Is "remains responsive … without noticeable delay" given a measurable threshold rather than a subjective adjective? [Measurability, Spec §FR-009, §SC-009]
 - [ ] CHK012 Are the bulk-cleanup selection criteria fully specified (exactly which filters, whether they combine, behavior of an empty match)? [Clarity, Spec §FR-010]
-- [ ] CHK013 Is a confirmation requirement specified for bulk deletion to guard against accidental mass removal? [Gap, Spec §FR-010, §US2]
-- [ ] CHK014 Are deletion semantics stated consistently — single and bulk both remove the record AND the underlying file? [Consistency, Spec §FR-010]
-- [ ] CHK015 Does the spec define the requirement when a record's underlying file is already missing during single or bulk deletion? [Edge Case, Spec §Edge Cases]
-- [ ] CHK016 Is the storage-abstraction boundary expressed as an observable requirement (what "user experience unchanged regardless of destination" means and how it's verified)? [Clarity, Spec §FR-020, §SC-007]
+- [x] CHK013 Is a confirmation requirement specified for bulk deletion to guard against accidental mass removal? [Gap, Spec §FR-010, §US2]
+- [x] CHK014 Are deletion semantics stated consistently — single and bulk both remove the record AND the underlying file? [Consistency, Spec §FR-010]
+- [x] CHK015 Does the spec define the requirement when a record's underlying file is already missing during single or bulk deletion? [Edge Case, Spec §Edge Cases]
+- [x] CHK016 Is the storage-abstraction boundary expressed as an observable requirement (what "user experience unchanged regardless of destination" means and how it's verified)? [Clarity, Spec §FR-020, §SC-007]
 - [ ] CHK017 Are the not-yet-available destinations and the "clear explanatory message" requirement specified concretely enough to test? [Completeness, Spec §FR-021]
-- [ ] CHK018 Is retention stated unambiguously (indefinite, no auto-pruning) and consistent between the Edge Cases and Assumptions sections? [Consistency, Spec §Edge Cases, §Assumptions]
+- [x] CHK018 Is retention stated unambiguously (indefinite, no auto-pruning) and consistent between the Edge Cases and Assumptions sections? [Consistency, Spec §Edge Cases, §Assumptions]
 
 ## Security & Privacy Requirements Quality
 
-- [ ] CHK019 Is the intended exposure model (private: localhost / LAN / VPN / reverse proxy) stated as a normative requirement, not only buried in Assumptions/Clarifications? [Gap, Spec §Assumptions, §Clarifications]
-- [ ] CHK020 Is the TLS/HTTPS responsibility boundary (operator's environment, not the app) unambiguous and verifiable as written? [Clarity, Spec §FR-017, §Assumptions]
-- [ ] CHK021 Is "build artifacts MUST NOT contain secrets or user data" precise about which artifacts and which data, so it can be objectively checked? [Measurability, Spec §FR-019]
+- [x] CHK019 Is the intended exposure model (private: localhost / LAN / VPN / reverse proxy) stated as a normative requirement, not only buried in Assumptions/Clarifications? [Gap, Spec §Assumptions, §Clarifications]
+- [x] CHK020 Is the TLS/HTTPS responsibility boundary (operator's environment, not the app) unambiguous and verifiable as written? [Clarity, Spec §FR-017, §Assumptions]
+- [x] CHK021 Is "build artifacts MUST NOT contain secrets or user data" precise about which artifacts and which data, so it can be objectively checked? [Measurability, Spec §FR-019]
 - [ ] CHK022 Are requirements defined for how the owner credential is provided and handled, without implying plaintext exposure? [Gap, Spec §FR-017]
 - [ ] CHK023 Do error-message requirements constrain against leaking sensitive detail (credentials, internal paths) while still being user-friendly? [Coverage, Spec §FR-023]
-- [ ] CHK024 Is access-control behavior consistent between "open when password unset" (FR-017) and the private-deployment posture (would open + internet-facing conflict)? [Consistency, Spec §FR-017, §Assumptions]
+- [x] CHK024 Is access-control behavior consistent between "open when password unset" (FR-017) and the private-deployment posture (would open + internet-facing conflict)? [Consistency, Spec §FR-017, §Assumptions]
 
 ## UX & Interaction Requirements Quality
 
 - [ ] CHK025 Are loading / in-progress state requirements defined for generation that can take several seconds? [Gap, Spec §US1]
 - [ ] CHK026 Are empty-state requirements defined for the Library before any generation exists? [Gap, Edge Case]
 - [ ] CHK027 Is the per-item character limit stated as a concrete number or left vague as a "documented limit"? [Ambiguity, Spec §FR-001]
-- [ ] CHK028 Are inline-preview-vs-download-only requirements consistent and complete for every non-previewable format? [Consistency, Spec §FR-004, §Edge Cases]
+- [x] CHK028 Are inline-preview-vs-download-only requirements consistent and complete for every non-previewable format? [Consistency, Spec §FR-004, §Edge Cases]
 - [ ] CHK029 Do tag requirements name exactly which formats can and cannot carry tags, rather than referring to "supported formats" abstractly? [Clarity, Spec §FR-013, §FR-014]
 - [ ] CHK030 Is the status-message requirement (success details incl. file size; friendly errors) specified consistently across single and batch flows? [Consistency, Spec §FR-005, §US2]
-- [ ] CHK031 Is it explicit that the character limit and validation apply per batch item, not to the combined batch total? [Completeness, Spec §FR-022, §Edge Cases]
+- [x] CHK031 Is it explicit that the character limit and validation apply per batch item, not to the combined batch total? [Completeness, Spec §FR-022, §Edge Cases]
 
 ## Cross-Cutting Consistency & Traceability
 
 - [ ] CHK032 Does every functional requirement (FR-001–FR-024) map to at least one acceptance scenario or success criterion? [Traceability, Spec §FR, §US, §SC]
-- [ ] CHK033 Is the concurrency requirement (no corruption from simultaneous generations) consistent with the single-user assumption — is "multiple browser tabs" the only concurrency in scope? [Consistency, Spec §FR-024, §Assumptions]
-- [ ] CHK034 Are the three resolved clarifications (exposure, retention+bulk-cleanup, pagination) reflected without contradiction everywhere they touch the spec? [Consistency, Spec §Clarifications]
+- [x] CHK033 Is the concurrency requirement (no corruption from simultaneous generations) consistent with the single-user assumption — is "multiple browser tabs" the only concurrency in scope? [Consistency, Spec §FR-024, §Assumptions]
+- [x] CHK034 Are the three resolved clarifications (exposure, retention+bulk-cleanup, pagination) reflected without contradiction everywhere they touch the spec? [Consistency, Spec §Clarifications]
 
 ## Notes
 
@@ -66,3 +66,36 @@ question and the spec likely needs a fix before planning — not that code is br
 - Each item cites a spec section `[Spec §…]` or a marker (`[Gap]`, `[Ambiguity]`, `[Conflict]`, `[Assumption]`) for traceability.
 - Resolve `[Gap]`/`[Ambiguity]` items in `spec.md` (or consciously defer them to `/speckit-plan` with a note) before planning.
 - This is separate from `requirements.md` (the automated spec-quality gate); this file is the author's pre-plan readiness review across the four chosen domains.
+
+## Validation Results — 2026-06-09
+
+Validated all 34 items against `spec.md` (spec-text quality only — not shipped code behavior).
+**17 pass, 17 need tightening.** The 17 unchecked items above are grouped below by fix type.
+
+**Measurability / missing concrete numbers**
+- **CHK004** — SC-006's "under 15 minutes" has no in-spec ordered step list and no defined "fresh host" baseline (OS? Docker preinstalled? network?), so it isn't objectively measurable from the spec.
+- **CHK011** — SC-009's "without noticeable delay" is a subjective adjective; no numeric threshold (e.g., page loads in < 1 s).
+- **CHK027** — FR-001 says "documented per-item character limit" but never states the number (the actual 4096 lives only in code).
+
+**Under-specified behavior (gaps)**
+- **CHK006** — FR-018 never defines what an "explicit, deliberate purge" *is*, so a test can't distinguish it from normal teardown.
+- **CHK007** — No requirement for a missing / unwritable / unsupported persistence location at startup.
+- **CHK008 & CHK022** — FR-017 specifies the unset→open / set→required states, but not how the password is *supplied* or *handled* (no anti-plaintext / no-logging constraint).
+- **CHK010** — FR-009's "paginated" leaves page size, default ordering, and filter×page interaction unspecified.
+- **CHK012** — FR-010's bulk filters ("such as date range or voice") aren't enumerated; whether filters combine and the empty-match behavior are undefined.
+- **CHK017** — FR-021 never names *which* destinations are "not-yet-available", nor the message content, so it isn't concretely testable.
+- **CHK025** — No loading / in-progress requirement for a generation that can take several seconds.
+- **CHK026** — No Library empty-state requirement (what shows before any generation exists).
+- **CHK029** — FR-013/FR-014 reference "supported formats" abstractly; they never name which formats can/can't carry tags.
+
+**Consistency / coverage**
+- **CHK003** — The US4 narrative omits the storage-location and history-location config that FR-015 names (folded into vague "preferences"); not a contradiction, but a coverage gap.
+- **CHK023** — FR-023 bans raw technical traces but does not constrain leaking credentials / internal paths inside an otherwise "human-readable" message.
+- **CHK030** — FR-005's status requirement (file size + friendly error) is specified for single generation but not mirrored for the batch flow (FR-008 / US2 are silent on per-item status & errors).
+- **CHK032** — Not every FR maps to an acceptance scenario or SC: **FR-003** (style/instruction option), **FR-019** (no secrets in artifacts), and **FR-024** (concurrency — covered only by an Edge Case, not a scenario/SC) are unmapped.
+
+**Passes carrying minor nits (still checked):**
+- **CHK005** — FR-018 covers audio+history across teardown/restart/redeployment; the word "rebuild" appears only in the US4 Independent Test, treated as subsumed by "redeployment" (data lives outside the image).
+- **CHK009** — Record attributes are enumerated in Key Entities, but FR-006's list omits the metadata tags that Key Entities includes (tiny internal inconsistency).
+- **CHK021** — Objectively checkable, though "distributable build artifacts" isn't enumerated (effectively the container image).
+- **CHK033** — Consistent with the single-user assumption, though the Edge Case's "e.g., several browser tabs" doesn't strictly bound concurrency to *only* tabs.
