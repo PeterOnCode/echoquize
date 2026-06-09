@@ -32,11 +32,11 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Purpose**: Project initialization and dependency lock.
 
-- [ ] T001 Initialize the uv project at repo root with `uv init --app --python 3.12` (creates `pyproject.toml` and `.python-version` pinned to 3.12)
-- [ ] T002 Add runtime dependencies with `uv add gradio openai python-dotenv mutagen` (updates `pyproject.toml`, creates `uv.lock`); commit `uv.lock`
-- [ ] T003 [P] Create the package tree with empty `__init__.py` files in `src/tts/`, `src/tags/`, `src/storage/`, `src/db/`, `src/ui/`
-- [ ] T004 [P] Extend `.gitignore` to exclude `.env`, `audio/`, `echoquize.db`, `.venv/`, `__pycache__/` (do NOT ignore `uv.lock`)
-- [ ] T005 [P] Create `.env.example` documenting `OPENAI_API_KEY`, `AUDIO_DIR`, `DB_PATH`, `HOST`, `PORT`, `STORAGE_BACKEND`, `UI_USERNAME`, `UI_PASSWORD`
+- [X] T001 Initialize the uv project at repo root with `uv init --app --python 3.12` (creates `pyproject.toml` and `.python-version` pinned to 3.12)
+- [X] T002 Add runtime dependencies with `uv add gradio openai python-dotenv mutagen` (updates `pyproject.toml`, creates `uv.lock`); commit `uv.lock`
+- [X] T003 [P] Create the package tree with empty `__init__.py` files in `src/tts/`, `src/tags/`, `src/storage/`, `src/db/`, `src/ui/`
+- [X] T004 [P] Extend `.gitignore` to exclude `.env`, `audio/`, `echoquize.db`, `.venv/`, `__pycache__/` (do NOT ignore `uv.lock`)
+- [X] T005 [P] Create `.env.example` documenting `OPENAI_API_KEY`, `AUDIO_DIR`, `DB_PATH`, `HOST`, `PORT`, `STORAGE_BACKEND`, `UI_USERNAME`, `UI_PASSWORD`
 
 ---
 
@@ -46,11 +46,11 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T006 [P] Implement `config.py` per `contracts/config.md`: load `.env` via python-dotenv, expose typed constants, raise `ValueError` if `OPENAI_API_KEY` is missing, coerce `PORT` to int
-- [ ] T007 [P] Implement the `StorageBackend` ABC in `src/storage/base.py` with abstract `save(data, filename) -> str`, `delete(path)`, `get_url(path) -> str` per `contracts/storage-backend.md`
-- [ ] T008 [P] Implement `src/db/database.py` core per `data-model.md`/`contracts/database.md`: `init_db()` creating the `generations` table + `idx_generations_created_at` and `idx_generations_voice`; open SQLite with `check_same_thread=False` and a module-level `threading.Lock`; implement `insert_generation(record)` (UUID4 id) and `get_generation(id)`
-- [ ] T009 Implement `LocalStorage` in `src/storage/local.py` (writes under `AUDIO_DIR/YYYY/MM/`, creates dirs; tolerant `delete` of a missing file; `get_url` returns the path) — depends on T007
-- [ ] T010 Implement the `get_storage()` factory in `src/storage/__init__.py` returning `LocalStorage` for `local`/default and raising `ValueError` for an unknown `STORAGE_BACKEND` — depends on T007, T009
+- [X] T006 [P] Implement `config.py` per `contracts/config.md`: load `.env` via python-dotenv, expose typed constants, raise `ValueError` if `OPENAI_API_KEY` is missing, coerce `PORT` to int
+- [X] T007 [P] Implement the `StorageBackend` ABC in `src/storage/base.py` with abstract `save(data, filename) -> str`, `delete(path)`, `get_url(path) -> str` per `contracts/storage-backend.md`
+- [X] T008 [P] Implement `src/db/database.py` core per `data-model.md`/`contracts/database.md`: `init_db()` creating the `generations` table + `idx_generations_created_at` and `idx_generations_voice`; open SQLite with `check_same_thread=False` and a module-level `threading.Lock`; implement `insert_generation(record)` (UUID4 id) and `get_generation(id)`
+- [X] T009 Implement `LocalStorage` in `src/storage/local.py` (writes under `AUDIO_DIR/YYYY/MM/`, creates dirs; tolerant `delete` of a missing file; `get_url` returns the path) — depends on T007
+- [X] T010 Implement the `get_storage()` factory in `src/storage/__init__.py` returning `LocalStorage` for `local`/default and raising `ValueError` for an unknown `STORAGE_BACKEND` — depends on T007, T009
 
 **Checkpoint**: `uv run python -c "import config"` fails fast without `.env`; `get_storage()` returns `LocalStorage`; `init_db()` creates the schema (`sqlite3 echoquize.db ".schema"`).
 
@@ -62,10 +62,10 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Independent Test**: Open the app, enter a sentence, Generate → audio plays and a file downloads; a row + audio file exist.
 
-- [ ] T011 [P] [US1] Implement `generate_speech(text, model, voice, format, speed, instructions=None)` in `src/tts/client.py` using `client.audio.speech.with_streaming_response.create(...)` + `response.read()`; send `instructions` only for `gpt-4o-mini-tts`; catch `openai.AuthenticationError`/`RateLimitError`/`APIError` per `contracts/tts-client.md` — depends on T006
-- [ ] T012 [P] [US1] Build the single-generation Generate tab in `src/ui/generate_tab.py`: Text (≤4096) with character counter, Voice/Model/Format dropdowns, Speed slider (0.25–4.0, step 0.05), Voice-Instructions textbox visible only for `gpt-4o-mini-tts`, Generate button, `gr.Audio` preview, `gr.File` download, Status box
-- [ ] T013 [US1] Wire the Generate event in `src/ui/generate_tab.py`: validate non-empty + ≤4096 → `generate_speech` → `get_storage().save` → `insert_generation` → return preview + download + status(file size); `pcm` → download-only + note; map errors to friendly status — depends on T010, T011, T012
-- [ ] T014 [US1] Create `app.py`: `gr.Blocks` mounting the Generate tab, call `init_db()` at startup, `demo.launch(server_name=config.HOST, server_port=config.PORT, share=False)` — depends on T013
+- [X] T011 [P] [US1] Implement `generate_speech(text, model, voice, format, speed, instructions=None)` in `src/tts/client.py` using `client.audio.speech.with_streaming_response.create(...)` + `response.read()`; send `instructions` only for `gpt-4o-mini-tts`; catch `openai.AuthenticationError`/`RateLimitError`/`APIError` per `contracts/tts-client.md` — depends on T006
+- [X] T012 [P] [US1] Build the single-generation Generate tab in `src/ui/generate_tab.py`: Text (≤4096) with character counter, Voice/Model/Format dropdowns, Speed slider (0.25–4.0, step 0.05), Voice-Instructions textbox visible only for `gpt-4o-mini-tts`, Generate button, `gr.Audio` preview, `gr.File` download, Status box
+- [X] T013 [US1] Wire the Generate event in `src/ui/generate_tab.py`: validate non-empty + ≤4096 → `generate_speech` → `get_storage().save` → `insert_generation` → return preview + download + status(file size); `pcm` → download-only + note; map errors to friendly status — depends on T010, T011, T012
+- [X] T014 [US1] Create `app.py`: `gr.Blocks` mounting the Generate tab, call `init_db()` at startup, `demo.launch(server_name=config.HOST, server_port=config.PORT, share=False)` — depends on T013
 
 **Checkpoint (manual)**: Run `quickstart.md` → US1. MVP is shippable here.
 
@@ -77,12 +77,12 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Independent Test**: Batch 3 texts → 3 files in one zip; open Library → all past generations listed, filter by voice, delete one, restart app → library still populated.
 
-- [ ] T015 [P] [US2] Extend `src/db/database.py` with `list_generations(limit=50, offset=0, voice=None)` (ORDER BY `created_at` DESC), `count_generations(voice=None)`, `delete_generation(id)` (returns `file_path`), and `bulk_delete(voice=None, date_from=None, date_to=None)` (returns `file_paths`) per `contracts/database.md`
-- [ ] T016 [US2] Add the Batch section to `src/ui/generate_tab.py`: `gr.Dataframe` queue, Add-to-Queue, Remove-Selected, Generate-All with `gr.Progress`, `gr.File` zip download; queue held in `gr.State`; validate each item ≤4096 (per item, not total) — depends on T013
-- [ ] T017 [US2] Implement the Generate-All handler in `src/ui/generate_tab.py`: for each queued item `generate_speech` → `get_storage().save` → `insert_generation`, then bundle all outputs into one zip for download — depends on T016
-- [ ] T018 [US2] Build the Library tab in `src/ui/library_tab.py`: paginated `gr.Dataframe` (ID, Created, Voice, Model, Format, Speed, Text preview 60 chars, File Size) via `list_generations`, Voice filter dropdown, Refresh, page controls, row-select → `gr.Audio` preview — depends on T015
-- [ ] T019 [US2] Implement Library deletion in `src/ui/library_tab.py`: Delete Selected → `delete_generation` + `get_storage().delete`; Bulk cleanup (date range and/or voice) → confirmation → `bulk_delete` + remove returned files — depends on T015, T018
-- [ ] T020 [US2] Mount the Library tab in `app.py` and refresh it after each generation — depends on T014, T018
+- [X] T015 [P] [US2] Extend `src/db/database.py` with `list_generations(limit=50, offset=0, voice=None)` (ORDER BY `created_at` DESC), `count_generations(voice=None)`, `delete_generation(id)` (returns `file_path`), and `bulk_delete(voice=None, date_from=None, date_to=None)` (returns `file_paths`) per `contracts/database.md`
+- [X] T016 [US2] Add the Batch section to `src/ui/generate_tab.py`: `gr.Dataframe` queue, Add-to-Queue, Remove-Selected, Generate-All with `gr.Progress`, `gr.File` zip download; queue held in `gr.State`; validate each item ≤4096 (per item, not total) — depends on T013
+- [X] T017 [US2] Implement the Generate-All handler in `src/ui/generate_tab.py`: for each queued item `generate_speech` → `get_storage().save` → `insert_generation`, then bundle all outputs into one zip for download — depends on T016
+- [X] T018 [US2] Build the Library tab in `src/ui/library_tab.py`: paginated `gr.Dataframe` (ID, Created, Voice, Model, Format, Speed, Text preview 60 chars, File Size) via `list_generations`, Voice filter dropdown, Refresh, page controls, row-select → `gr.Audio` preview — depends on T015
+- [X] T019 [US2] Implement Library deletion in `src/ui/library_tab.py`: Delete Selected → `delete_generation` + `get_storage().delete`; Bulk cleanup (date range and/or voice) → confirmation → `bulk_delete` + remove returned files — depends on T015, T018
+- [X] T020 [US2] Mount the Library tab in `app.py` and refresh it after each generation — depends on T014, T018
 
 **Checkpoint (manual)**: Run `quickstart.md` → US2 (including restart-persistence and ~1,000-row responsiveness).
 
