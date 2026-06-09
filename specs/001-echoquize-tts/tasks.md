@@ -109,11 +109,11 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Independent Test**: `docker compose up -d --build` → UI reachable; generate a file → `down`/`up` → file still in Library and visible under `./data/audio/`.
 
-- [ ] T025 [US4] Add container launch config + optional auth in `app.py`: keep `server_name=config.HOST`, `server_port=config.PORT`, `share=False`; pass `auth=(config.UI_USERNAME, config.UI_PASSWORD)` only when both are set — depends on T014
-- [ ] T026 [P] [US4] Write `Dockerfile`: multi-stage uv build (builder `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` running `uv sync --locked --no-dev`; runtime `python:3.12-slim-bookworm`, non-root uid 999, `CMD ["python","app.py"]`)
-- [ ] T027 [P] [US4] Write `.dockerignore` excluding `.venv/`, `.git/`, `audio/`, `data/`, `echoquize.db`, `.env`, `__pycache__/`, `*.pyc`, `context/`, `*.md`
-- [ ] T028 [US4] Write `compose.yml`: build `.`, ports `${PORT:-7860}:7860`, `env_file: .env`, environment `HOST=0.0.0.0`/`PORT=7860`/`AUDIO_DIR=/app/data/audio`/`DB_PATH=/app/data/echoquize.db`, volume `./data:/app/data`, `restart: unless-stopped` — depends on T026
-- [ ] T029 [P] [US4] Update `.env.example` with all runtime knobs and a note to pre-create `./data` owned by uid 999 (`mkdir -p data && sudo chown -R 999:999 data`) before the first Compose run
+- [X] T025 [US4] Add container launch config + optional auth in `app.py`: keep `server_name=config.HOST`, `server_port=config.PORT`, `share=False`; pass `auth=(config.UI_USERNAME, config.UI_PASSWORD)` only when both are set — depends on T014
+- [X] T026 [P] [US4] Write `Dockerfile`: multi-stage uv build (builder `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` running `uv sync --locked --no-dev`; runtime `python:3.12-slim-bookworm`, non-root uid 999, `CMD ["python","app.py"]`)
+- [X] T027 [P] [US4] Write `.dockerignore` excluding `.venv/`, `.git/`, `audio/`, `data/`, `echoquize.db`, `.env`, `__pycache__/`, `*.pyc`, `context/`, `*.md`
+- [X] T028 [US4] Write `compose.yml`: build `.`, ports `${PORT:-7860}:7860`, `env_file: .env`, environment `HOST=0.0.0.0`/`PORT=7860`/`AUDIO_DIR=/app/data/audio`/`DB_PATH=/app/data/echoquize.db`, volume `./data:/app/data`, `restart: unless-stopped` — depends on T026
+- [X] T029 [P] [US4] Update `.env.example` with all runtime knobs and a note to pre-create `./data` owned by uid 999 (`mkdir -p data && sudo chown -R 999:999 data`) before the first Compose run
 
 **Checkpoint (manual)**: Run `quickstart.md` → US4 (HTTP 200, optional auth, down/up persistence, no secrets/data in image).
 
@@ -125,9 +125,9 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Independent Test**: default `local` works end to end; unknown backend → `ValueError`; `s3`/`gdrive` → clear `NotImplementedError`; user-facing behavior unchanged.
 
-- [ ] T030 [P] [US5] Add an `S3Storage(StorageBackend)` stub in `src/storage/s3.py` (reads `S3_BUCKET`, `S3_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`; methods raise `NotImplementedError` with a clear message; boto3 optional) per `contracts/storage-backend.md`
-- [ ] T031 [P] [US5] Add a `GDriveStorage(StorageBackend)` stub in `src/storage/gdrive.py` (reads `GDRIVE_FOLDER_ID`, `GDRIVE_CREDENTIALS_JSON`; methods raise `NotImplementedError("Google Drive storage not yet implemented")`; import-safe without google libraries)
-- [ ] T032 [US5] Extend `get_storage()` in `src/storage/__init__.py` to map `s3`→`S3Storage` and `gdrive`→`GDriveStorage`; add the `boto3` optional extra (`uv add --optional s3 boto3`); document the `STORAGE_BACKEND` options in `.env.example` — depends on T010, T030, T031
+- [X] T030 [P] [US5] Add an `S3Storage(StorageBackend)` stub in `src/storage/s3.py` (reads `S3_BUCKET`, `S3_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`; methods raise `NotImplementedError` with a clear message; boto3 optional) per `contracts/storage-backend.md`
+- [X] T031 [P] [US5] Add a `GDriveStorage(StorageBackend)` stub in `src/storage/gdrive.py` (reads `GDRIVE_FOLDER_ID`, `GDRIVE_CREDENTIALS_JSON`; methods raise `NotImplementedError("Google Drive storage not yet implemented")`; import-safe without google libraries)
+- [X] T032 [US5] Extend `get_storage()` in `src/storage/__init__.py` to map `s3`→`S3Storage` and `gdrive`→`GDriveStorage`; add the `boto3` optional extra (`uv add --optional s3 boto3`); document the `STORAGE_BACKEND` options in `.env.example` — depends on T010, T030, T031
 
 **Checkpoint (manual)**: Run `quickstart.md` → US5.
 
@@ -137,11 +137,13 @@ Single-project layout (see plan.md): app at repo root (`app.py`, `config.py`), s
 
 **Purpose**: Final hardening across stories.
 
-- [ ] T033 [P] Finalize friendly error/status messages across `src/ui/generate_tab.py` and `src/ui/library_tab.py` (empty text, >4096, auth failure, rate limit) so no traceback ever reaches the user (SC-004)
-- [ ] T034 [P] Add format-limitation UI notices in `src/ui/`: WAV ID3 tooltip, PCM download-only + tags-skipped, AAC tags-not-supported
-- [ ] T035 [P] Add a periodic storage-cleanup note to `.env.example` (and README if present) addressing storage growth
+- [X] T033 [P] Finalize friendly error/status messages across `src/ui/generate_tab.py` and `src/ui/library_tab.py` (empty text, >4096, auth failure, rate limit) so no traceback ever reaches the user (SC-004)
+- [X] T034 [P] Add format-limitation UI notices in `src/ui/`: WAV ID3 tooltip, PCM download-only + tags-skipped, AAC tags-not-supported
+- [X] T035 [P] Add a periodic storage-cleanup note to `.env.example` (and README if present) addressing storage growth
 - [ ] T036 Run the full `specs/001-echoquize-tts/quickstart.md` validation (US1–US5) and tick items in `specs/001-echoquize-tts/checklists/readiness.md`
-- [ ] T037 Verify constitution gates: `uv sync --frozen` resolves; built image runs as uid 999 with no `uv` binary and no `.env`/`audio/`/`data/`; a `down`/`up` cycle preserves `./data`
+  - **Partially done (2026-06-09):** Validated without spending live API: US5 factory (local→`LocalStorage`, bogus→`ValueError`, s3/gdrive→clear `NotImplementedError`); US3 `write_tags('x.pcm','pcm',{})`→`TagsNotSupportedError`; US4 container fail-fast w/o `OPENAI_API_KEY`, `docker compose up`→HTTP 200, `down` (no `-v`) preserves `./data/echoquize.db`.
+  - **Operator-only remainder:** US1 single generate, US2 batch+zip, US3 mp3 tag→VLC, and optional-auth login require a live OpenAI key (billed) + browser/VLC. `readiness.md` items intentionally NOT ticked — they grade spec *wording*, not code, and were already accepted as deferred on 2026-06-09.
+- [X] T037 Verify constitution gates: `uv sync --frozen` resolves; built image runs as uid 999 with no `uv` binary and no `.env`/`audio/`/`data/`; a `down`/`up` cycle preserves `./data`
 
 ---
 

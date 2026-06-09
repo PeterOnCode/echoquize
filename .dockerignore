@@ -1,0 +1,40 @@
+# Keep secrets, runtime data, and bloat out of image layers (Constitution Principle IV).
+# Anything copied into a layer is effectively published and permanent.
+
+# Virtualenv (rebuilt inside the image by uv)
+.venv/
+
+# Version control
+.git/
+.gitignore
+
+# Secrets — NEVER bake into the image (injected at runtime via compose env_file)
+.env
+
+# Runtime data — lives on the host bind mount, not in the image
+audio/
+data/
+echoquize.db
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Docs / specs / agent context — not needed at runtime
+context/
+*.md
+specs/
+.claude/
+.specify/
+
+# Build / deploy tooling that need not enter the image
+Dockerfile
+.dockerignore
+compose.yml
+justfile
+
+# Editor / OS / agent noise
+.DS_Store
+.vscode/
+.agents/
+.idea/
