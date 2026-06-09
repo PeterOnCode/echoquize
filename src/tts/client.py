@@ -59,5 +59,7 @@ def generate_speech(
         raise TTSError("Invalid API key — check your .env.") from exc
     except openai.RateLimitError as exc:
         raise TTSError("Rate limited — please retry shortly.") from exc
+    except openai.APIConnectionError as exc:  # subclass of APIError — must precede it
+        raise TTSError("Connection error — please check your network.") from exc
     except openai.APIError as exc:
         raise TTSError("Speech service error — please try again.") from exc
