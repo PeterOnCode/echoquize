@@ -123,7 +123,7 @@ def _generate_all(queue, progress=gr.Progress()):
                         "speed": item["speed"], "file_path": path, "file_size": len(audio),
                     }
                 )
-                zf.write(path, arcname=os.path.basename(path))
+                zf.writestr(os.path.basename(path), audio)  # bytes in-hand; no disk re-read, backend-agnostic
             except TTSError as exc:
                 errors.append(str(exc))
                 continue
