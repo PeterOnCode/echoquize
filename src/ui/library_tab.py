@@ -1,5 +1,7 @@
 """Library tab: browse, paginate, filter, preview, delete. See contracts/ui-contract.md."""
 
+import os
+
 import gradio as gr
 
 from src.db.database import (
@@ -82,39 +84,56 @@ def _tags_dict(title, artist, album, comment, genre, year):
     }
 
 
-def _save_tags(selected_id, title, artist, album, comment, genre, year):
-    if not selected_id:
-        return "❌ Select a row first."
-    rec = get_generation(selected_id)
-    if not rec:
-        return "❌ That item no longer exists."
-    tags = _tags_dict(title, artist, album, comment, genre, year)
+def _file_size(path):
+    """On-disk size for a local file, or None if it can't be measured (remote backend)."""
     try:
-        write_tags(rec["file_path"], rec["format"], tags)
-    except TagsNotSupportedError:
-        return f"❌ Tags are not supported for {rec['format']}."
-    except Exception as exc:  # never leak a traceback to the user
-        return f"❌ Could not write tags ({type(exc).__name__})."
-    update_tags(selected_id, tags)
-    return "✅ Tags saved."
+        return os.path.getsize(path)
+    except OSError:
+        return None
 
 
-def _clear_tags(selected_id):
-    """Strip tags from the file and the record; also blank the six input fields."""
+def _save_tags(selected_id, page, voice_filter, title, artist, album, comment, genre, year):
+    """Write tags to the file + record, then reload so records_state is fresh."""
+    status = "✅ Tags saved."
     if not selected_id:
-        return (*_EMPTY_TAG_FIELDS, "❌ Select a row first.")
-    rec = get_generation(selected_id)
-    if not rec:
-        return (*_EMPTY_TAG_FIELDS, "❌ That item no longer exists.")
-    empty = _tags_dict("", "", "", "", "", "")
-    try:
-        write_tags(rec["file_path"], rec["format"], empty)
-    except TagsNotSupportedError:
-        pass  # nothing was written for this format anyway
-    except Exception as exc:
-        return (*_EMPTY_TAG_FIELDS, f"❌ Could not clear file tags ({type(exc).__name__}).")
-    update_tags(selected_id, empty)
-    return (*_EMPTY_TAG_FIELDS, "✅ Tags cleared.")
+        status = "❌ Select a row first."
+    else:
+        rec = get_generation(selected_id)
+        if not rec:
+            status = "❌ That item no longer exists."
+        else:
+            tags = _tags_dict(title, artist, album, comment, genre, year)
+            try:
+                write_tags(rec["file_path"], rec["format"], tags)
+                update_tags(selected_id, tags, file_size=_file_size(rec["file_path"]))
+            except TagsNotSupportedError:
+                status = f"❌ Tags are not supported for {rec['format']}."
+            except Exception as exc:  # never leak a traceback to the user
+                status = f"❌ Could not write tags ({type(exc).__name__})."
+    view, info, records, page = reload_page(page, voice_filter)
+    return view, info, records, page, status
+
+
+def _clear_tags(selected_id, page, voice_filter):
+    """Strip tags from the file and record, blank the fields, and reload state."""
+    status = "✅ Tags cleared."
+    if not selected_id:
+        status = "❌ Select a row first."
+    else:
+        rec = get_generation(selected_id)
+        if not rec:
+            status = "❌ That item no longer exists."
+        else:
+            empty = _tags_dict("", "", "", "", "", "")
+            try:
+                write_tags(rec["file_path"], rec["format"], empty)
+                update_tags(selected_id, empty, file_size=_file_size(rec["file_path"]))
+            except TagsNotSupportedError:
+                update_tags(selected_id, empty)  # no file tags; just clear the record
+            except Exception as exc:
+                status = f"❌ Could not clear file tags ({type(exc).__name__})."
+    view, info, records, page = reload_page(page, voice_filter)
+    return (*_EMPTY_TAG_FIELDS, view, info, records, page, status)
 
 
 def _delete_selected(selected_id, page, voice_filter):
@@ -218,13 +237,14 @@ def build_library_tab():
         )
         save_tags_btn.click(
             _save_tags,
-            [selected_id, e_title, e_artist, e_album, e_comment, e_genre, e_year],
-            status,
+            [selected_id, page_state, voice_filter,
+             e_title, e_artist, e_album, e_comment, e_genre, e_year],
+            page_outputs + [status],
         )
         clear_tags_btn.click(
             _clear_tags,
-            selected_id,
-            [e_title, e_artist, e_album, e_comment, e_genre, e_year, status],
+            [selected_id, page_state, voice_filter],
+            [e_title, e_artist, e_album, e_comment, e_genre, e_year] + page_outputs + [status],
         )
         delete_btn.click(
             _delete_selected, [selected_id, page_state, voice_filter], page_outputs + [status]

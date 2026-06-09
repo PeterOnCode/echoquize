@@ -107,25 +107,32 @@ def get_generation(gid: str) -> dict | None:
     return dict(row) if row else None
 
 
-def update_tags(gid: str, tags: dict) -> None:
+def update_tags(gid: str, tags: dict, file_size: int | None = None) -> None:
     """Replace the six tag_* columns for one generation (FR-013).
 
     Missing/empty keys are stored as NULL so the record stays in sync with the
-    file when tags are cleared.
+    file when tags are cleared. When ``file_size`` is given, the file_size column
+    is updated too (writing/clearing tags changes the on-disk size).
     """
     def _val(key: str) -> str | None:
         return str(tags.get(key) or "").strip() or None
 
+    cols = [
+        "tag_title = ?", "tag_artist = ?", "tag_album = ?",
+        "tag_comment = ?", "tag_genre = ?", "tag_year = ?",
+    ]
+    params: list = [
+        _val("title"), _val("artist"), _val("album"),
+        _val("comment"), _val("genre"), _val("year"),
+    ]
+    if file_size is not None:
+        cols.append("file_size = ?")
+        params.append(int(file_size))
+    params.append(gid)
+
     with _lock:
         conn = _get_conn()
-        conn.execute(
-            "UPDATE generations SET tag_title = ?, tag_artist = ?, tag_album = ?, "
-            "tag_comment = ?, tag_genre = ?, tag_year = ? WHERE id = ?",
-            (
-                _val("title"), _val("artist"), _val("album"),
-                _val("comment"), _val("genre"), _val("year"), gid,
-            ),
-        )
+        conn.execute(f"UPDATE generations SET {', '.join(cols)} WHERE id = ?", params)
         conn.commit()
 
 

@@ -35,17 +35,36 @@ def _collect_tags(title, artist, album, comment, genre, year):
     return {k: ((v or "").strip() or None) for k, v in raw.items()}
 
 
-def _apply_tags(path, fmt, tags):
-    """Best-effort: tag the saved file. Never blocks the generation. Returns a status note."""
+def _apply_tags(audio, fmt, tags):
+    """Tag the raw audio *bytes* (via a temp file) before they reach storage.
+
+    Returns ``(audio_bytes, status_note, written)``. Tagging bytes — not the stored
+    path — keeps this correct for remote backends and keeps file_size in sync with
+    the bytes actually saved. Never raises: a tag failure leaves the audio untagged
+    rather than losing the generation (Principle VII).
+    """
     if not any((v or "").strip() for v in tags.values()):
-        return ""
+        return audio, "", False
+    if fmt in NO_TAGS:
+        return audio, f" Tags not supported for {fmt} — skipped.", False
+    tmp_path = None
     try:
-        write_tags(path, fmt, tags)
-        return " Tags written."
+        with tempfile.NamedTemporaryFile(suffix=f".{fmt}", delete=False) as tmp:
+            tmp.write(audio)
+            tmp_path = tmp.name
+        write_tags(tmp_path, fmt, tags)
+        with open(tmp_path, "rb") as fh:
+            return fh.read(), " Tags written.", True
     except TagsNotSupportedError:
-        return f" Tags not supported for {fmt} — skipped."
+        return audio, f" Tags not supported for {fmt} — skipped.", False
     except Exception as exc:  # never leak a traceback to the user
-        return f" Tags could not be written ({type(exc).__name__})."
+        return audio, f" Tags could not be written ({type(exc).__name__}).", False
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 def _on_generate(text, voice, model, fmt, speed, instructions,
@@ -61,14 +80,19 @@ def _on_generate(text, voice, model, fmt, speed, instructions,
     try:
         storage = get_storage()
         audio = generate_speech(text, model, voice, fmt, float(speed), instructions)
+        audio, tag_note, tagged = _apply_tags(audio, fmt, tags)  # tag bytes before saving
         path = storage.save(audio, f"{uuid.uuid4()}.{fmt}")
         gid = insert_generation(
             {
                 "text_input": text, "voice": voice, "model": model, "format": fmt,
                 "speed": float(speed), "file_path": path, "file_size": len(audio),
-                "tag_title": tags["title"], "tag_artist": tags["artist"],
-                "tag_album": tags["album"], "tag_comment": tags["comment"],
-                "tag_genre": tags["genre"], "tag_year": tags["year"],
+                # persist tags only when they were actually embedded (no phantom metadata)
+                "tag_title": tags["title"] if tagged else None,
+                "tag_artist": tags["artist"] if tagged else None,
+                "tag_album": tags["album"] if tagged else None,
+                "tag_comment": tags["comment"] if tagged else None,
+                "tag_genre": tags["genre"] if tagged else None,
+                "tag_year": tags["year"] if tagged else None,
             }
         )
         url = storage.get_url(path)  # locator for Gradio — never the raw backend path
@@ -77,7 +101,6 @@ def _on_generate(text, voice, model, fmt, speed, instructions,
     except Exception as exc:  # safety net — never leak a traceback to the user
         return None, None, f"❌ Unexpected error ({type(exc).__name__})."
 
-    tag_note = _apply_tags(path, fmt, tags)  # post-save; a tag hiccup never loses the file
     status = (
         f"✅ Generated {len(audio) / 1024:.1f} KB — saved as "
         f"{os.path.basename(path)} (id {gid[:8]})." + tag_note

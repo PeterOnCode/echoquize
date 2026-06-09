@@ -27,10 +27,11 @@ _EASYID3_KEYS = {
     "title": "title", "artist": "artist", "album": "album",
     "comment": "comment", "genre": "genre", "year": "date",
 }
-# Logical key -> Vorbis comment field (flac, opus).
+# Logical key -> Vorbis comment field (flac, opus). Uppercase per Vorbis convention
+# (field names are case-insensitive). COMMENT is the field players surface as "Comment".
 _VORBIS_KEYS = {
-    "title": "title", "artist": "artist", "album": "album",
-    "comment": "comment", "genre": "genre", "year": "date",
+    "title": "TITLE", "artist": "ARTIST", "album": "ALBUM",
+    "comment": "COMMENT", "genre": "GENRE", "year": "DATE",
 }
 # Logical key -> ID3 frame class for the WAV path (comment handled separately as COMM).
 _WAV_FRAMES = {
@@ -118,9 +119,12 @@ def _write_wav(path: str, t: dict) -> None:
 
 def _write_vorbis(path: str, fmt: str, t: dict) -> None:
     audio = FLAC(path) if fmt == "flac" else OggOpus(path)
+    if audio.tags is None:  # rare: a container with no comment block yet
+        audio.add_tags()
+    tags = audio.tags
     for key, field in _VORBIS_KEYS.items():
         if t[key]:
-            audio[field] = t[key]
-        elif field in audio:
-            del audio[field]
+            tags[field] = [t[key]]
+        elif field in tags:
+            del tags[field]
     audio.save()
