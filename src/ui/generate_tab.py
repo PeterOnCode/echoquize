@@ -34,26 +34,28 @@ def _on_generate(text, voice, model, fmt, speed, instructions):
         return None, None, f"❌ Text exceeds {MAX_CHARS} characters (got {len(text)})."
 
     try:
+        storage = get_storage()
         audio = generate_speech(text, model, voice, fmt, float(speed), instructions)
+        path = storage.save(audio, f"{uuid.uuid4()}.{fmt}")
+        gid = insert_generation(
+            {
+                "text_input": text, "voice": voice, "model": model, "format": fmt,
+                "speed": float(speed), "file_path": path, "file_size": len(audio),
+            }
+        )
+        url = storage.get_url(path)  # locator for Gradio — never the raw backend path
     except TTSError as exc:
         return None, None, f"❌ {exc}"
     except Exception as exc:  # safety net — never leak a traceback to the user
         return None, None, f"❌ Unexpected error ({type(exc).__name__})."
 
-    path = get_storage().save(audio, f"{uuid.uuid4()}.{fmt}")
-    gid = insert_generation(
-        {
-            "text_input": text, "voice": voice, "model": model, "format": fmt,
-            "speed": float(speed), "file_path": path, "file_size": len(audio),
-        }
-    )
     status = (
         f"✅ Generated {len(audio) / 1024:.1f} KB — saved as "
         f"{os.path.basename(path)} (id {gid[:8]})."
     )
     if fmt in NO_PREVIEW:
-        return None, path, status + " Inline preview is unavailable for PCM — download only."
-    return path, path, status
+        return None, url, status + " Inline preview is unavailable for PCM — download only."
+    return url, url, status
 
 
 # --------------------------------------------------------------------------- #
@@ -113,21 +115,21 @@ def _generate_all(queue, progress=gr.Progress()):
                     item["text"], item["model"], item["voice"],
                     item["format"], item["speed"], item.get("instructions"),
                 )
+                path = storage.save(audio, f"{uuid.uuid4()}.{item['format']}")
+                insert_generation(
+                    {
+                        "text_input": item["text"], "voice": item["voice"],
+                        "model": item["model"], "format": item["format"],
+                        "speed": item["speed"], "file_path": path, "file_size": len(audio),
+                    }
+                )
+                zf.write(path, arcname=os.path.basename(path))
             except TTSError as exc:
                 errors.append(str(exc))
                 continue
             except Exception as exc:  # never leak a traceback
                 errors.append(type(exc).__name__)
                 continue
-            path = storage.save(audio, f"{uuid.uuid4()}.{item['format']}")
-            insert_generation(
-                {
-                    "text_input": item["text"], "voice": item["voice"],
-                    "model": item["model"], "format": item["format"],
-                    "speed": item["speed"], "file_path": path, "file_size": len(audio),
-                }
-            )
-            zf.write(path, arcname=os.path.basename(path))
             count += 1
 
     status = f"✅ Generated {count}/{len(queue)} item(s)."
