@@ -67,7 +67,10 @@ def init_db() -> None:
 def insert_generation(record: dict) -> str:
     """Insert one generation row; return its id (generated if absent)."""
     gid = record.get("id") or str(uuid.uuid4())
-    created = record.get("created_at") or datetime.now(timezone.utc).isoformat()
+    # Store tz-naive UTC: the bulk_delete date filters compare created_at
+    # lexicographically against UI cutoffs that carry no offset, so a trailing
+    # "+00:00" would mis-sort boundary rows. We always compute in UTC.
+    created = record.get("created_at") or datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     values = (
         gid,
         record["text_input"],
