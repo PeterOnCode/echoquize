@@ -27,11 +27,18 @@ def main() -> None:
     demo = build_app()
     # Optional single-owner login: only enforced when BOTH credentials are set
     # (unset → open access, per FR-017). HOST stays 0.0.0.0 for container reach.
-    auth = (
-        (config.UI_USERNAME, config.UI_PASSWORD)
-        if config.UI_USERNAME and config.UI_PASSWORD
-        else None
-    )
+    if config.UI_USERNAME and config.UI_PASSWORD:
+        auth = (config.UI_USERNAME, config.UI_PASSWORD)
+    else:
+        auth = None
+        if config.UI_USERNAME or config.UI_PASSWORD:
+            # Partial config is almost always a mistake — surface it loudly so the
+            # operator isn't surprised by an open instance (Principle VII).
+            print(
+                "⚠️  Only one of UI_USERNAME / UI_PASSWORD is set — authentication "
+                "is DISABLED (open access). Set BOTH to require login.",
+                flush=True,
+            )
     demo.launch(
         server_name=config.HOST,
         server_port=config.PORT,
