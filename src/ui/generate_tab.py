@@ -92,7 +92,8 @@ def _remove_selected(queue, selected_index):
     queue = list(queue or [])
     if selected_index is not None and 0 <= selected_index < len(queue):
         queue.pop(selected_index)
-    return queue, _queue_view(queue), f"{len(queue)} item(s) in queue."
+    # Clear the selection so a second click can't pop a now-shifted index.
+    return queue, _queue_view(queue), f"{len(queue)} item(s) in queue.", None
 
 
 def _on_queue_select(evt: gr.SelectData):
@@ -210,7 +211,7 @@ def build_generate_tab():
         remove_btn.click(
             _remove_selected,
             inputs=[queue_state, selected_index],
-            outputs=[queue_state, queue_df, batch_status],
+            outputs=[queue_state, queue_df, batch_status, selected_index],
         )
         batch_event = generate_all_btn.click(
             _generate_all, inputs=[queue_state], outputs=[zip_out, batch_status]
