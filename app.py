@@ -25,7 +25,19 @@ def build_app() -> gr.Blocks:
 def main() -> None:
     init_db()
     demo = build_app()
-    demo.launch(server_name=config.HOST, server_port=config.PORT, share=False)
+    # Optional single-owner login: only enforced when BOTH credentials are set
+    # (unset → open access, per FR-017). HOST stays 0.0.0.0 for container reach.
+    auth = (
+        (config.UI_USERNAME, config.UI_PASSWORD)
+        if config.UI_USERNAME and config.UI_PASSWORD
+        else None
+    )
+    demo.launch(
+        server_name=config.HOST,
+        server_port=config.PORT,
+        share=False,
+        auth=auth,
+    )
 
 
 if __name__ == "__main__":

@@ -219,7 +219,11 @@ def build_generate_tab():
                     voice = gr.Dropdown(label="Voice", choices=VOICE_CHOICES, value="alloy")
                     model = gr.Dropdown(label="Model", choices=MODEL_CHOICES, value="tts-1")
                 with gr.Row():
-                    fmt = gr.Dropdown(label="Format", choices=FORMAT_CHOICES, value="mp3")
+                    fmt = gr.Dropdown(
+                        label="Format", choices=FORMAT_CHOICES, value="mp3",
+                        info=("MP3/WAV use ID3 tags; FLAC/Opus use Vorbis/Opus tags. "
+                              "PCM has no inline preview; PCM & AAC can't carry tags."),
+                    )
                     speed = gr.Slider(
                         label="Speed", minimum=0.25, maximum=4.0, step=0.05, value=1.0
                     )

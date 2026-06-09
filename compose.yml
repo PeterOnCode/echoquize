@@ -1,0 +1,29 @@
+# Echoquize — single-service deployment (Constitution Principles III, IV, V).
+# Config comes from the environment; audio + DB persist on the ./data bind mount.
+#
+#   mkdir -p data && sudo chown -R 999:999 data   # once, before the first run
+#   docker compose up -d --build
+#
+# NEVER run `docker compose down -v` — the -v flag deletes the ./data volume
+# and destroys every saved generation (Principle V).
+
+services:
+  echoquize:
+    build: .
+    image: echoquize
+    # Host PORT (default 7860) maps to the in-container Gradio port 7860.
+    ports:
+      - "${PORT:-7860}:7860"
+    # Secrets (OPENAI_API_KEY, optional UI_USERNAME/UI_PASSWORD) come from .env.
+    env_file: .env
+    # Deployment-fixed overrides: bind 0.0.0.0 and point storage at the mount.
+    # These take precedence over any same-named keys in .env.
+    environment:
+      HOST: 0.0.0.0
+      PORT: 7860
+      AUDIO_DIR: /app/data/audio
+      DB_PATH: /app/data/echoquize.db
+    # Host-visible, durable persistence (Principle V).
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
