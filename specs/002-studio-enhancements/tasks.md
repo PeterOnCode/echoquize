@@ -136,8 +136,8 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Generate a file → written under `AUDIO_DIR/YYYY/MM/DD/` for today's UTC date; older files still play. (quickstart US6)
 
-- [ ] T023 [US6] Change `LocalStorage.save()` in `src/storage/local.py` to build the subdir as `YYYY/MM/DD` from `datetime.now(timezone.utc)`, and document the same day-level key convention in the `s3.py`/`gdrive.py` stub docstrings, per `contracts/storage-backend.md`. (Touches the same method as T016 — sequence after US4 if both are taken; the collision logic remains folder-relative and unaffected.)
-- [ ] T024 [US6] Validate US6 manually per `specs/002-studio-enhancements/quickstart.md` (new file under dated folder; old files still readable).
+- [X] T023 [US6] Change `LocalStorage.save()` in `src/storage/local.py` to build the subdir as `YYYY/MM/DD` from `datetime.now(timezone.utc)`, and document the same day-level key convention in the `s3.py`/`gdrive.py` stub docstrings, per `contracts/storage-backend.md`. (Touches the same method as T016 — sequence after US4 if both are taken; the collision logic remains folder-relative and unaffected.)
+- [X] T024 [US6] Validate US6 manually per `specs/002-studio-enhancements/quickstart.md` (new file under dated folder; old files still readable).
 
 **Checkpoint**: US6 functional; new audio organized by day across backends.
 

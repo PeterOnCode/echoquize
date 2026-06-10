@@ -11,14 +11,14 @@ _MAX_STEM = 64  # filename stem cap (matches the slug rule in src/naming.py)
 
 
 class LocalStorage(StorageBackend):
-    """Stores files under ``AUDIO_DIR/YYYY/MM/``."""
+    """Stores files under ``AUDIO_DIR/YYYY/MM/DD/`` (UTC)."""
 
     def __init__(self, base_dir: str | None = None) -> None:
         self.base_dir = Path(base_dir or config.AUDIO_DIR)
 
     def save(self, data: bytes, filename: str) -> str:
         now = datetime.now(timezone.utc)
-        subdir = self.base_dir / f"{now:%Y}" / f"{now:%m}"
+        subdir = self.base_dir / f"{now:%Y}" / f"{now:%m}" / f"{now:%d}"
         subdir.mkdir(parents=True, exist_ok=True)
         path = self._unique_path(subdir, filename)
         path.write_bytes(data)
