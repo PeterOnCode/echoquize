@@ -76,8 +76,44 @@ check-tags:
 check-storage:
     uv run python -c "from src.storage import get_storage; assert type(get_storage()).__name__ == 'LocalStorage'; print('OK: default backend is LocalStorage')"
 
+# US1/US4/US8: offline helpers — slugify, app_version, and the upload parser.
+check-helpers:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    uv run python - <<'PY'
+    import os, tempfile
+    from src.naming import slugify
+    from src.version import app_version
+
+    # slugify (US4): transliterate to ASCII, lowercase, non-Latin -> empty, cap 64.
+    assert slugify("Café déjà vu") == "cafe_deja_vu", slugify("Café déjà vu")
+    assert slugify("日本語") == "", "non-Latin title should slug to empty"
+    assert len(slugify("x" * 200)) <= 64, "stem must be capped at 64 chars"
+
+    # app_version (US8): never raises; a str today, None only if undeterminable.
+    v = app_version()
+    assert v is None or isinstance(v, str), v
+    print(f"OK: slugify; app_version() -> {v!r}")
+
+    # upload parser (US1): one item per valid line, blanks skipped, long lines rejected.
+    from src.tts.client import MAX_CHARS
+    from src.ui.generate_tab import _parse_upload
+    fd, path = tempfile.mkstemp(suffix=".txt")
+    os.close(fd)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("first line\n\n  \nsecond line\n" + ("x" * (MAX_CHARS + 1)) + "\n")
+    try:
+        valid, blank, rejected = _parse_upload(path)
+    finally:
+        os.unlink(path)
+    assert valid == ["first line", "second line"], valid
+    assert blank == 2, blank
+    assert rejected == [5], rejected
+    print(f"OK: _parse_upload added={len(valid)} blank={blank} rejected={rejected}")
+    PY
+
 # Run the offline checks that don't hit the API.
-verify: check check-tags check-storage
+verify: check check-tags check-storage check-helpers
 
 # --- Docker (US4 — needs Dockerfile + compose.yml from tasks T026/T028) ---
 

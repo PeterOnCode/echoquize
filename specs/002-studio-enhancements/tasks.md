@@ -194,9 +194,9 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Purpose**: Docs and shared validation across stories.
 
-- [ ] T035 [P] Update `README.md`: new/expanded tag fields, title-derived filenames + `YYYY/MM/DD` layout, `DEFAULT_TAG_*` env vars, and the version-display + `just bump-*` release workflow.
-- [ ] T036 Extend the `just verify` offline checks to exercise `naming.slugify`, `version.app_version`, and the US1 upload parser.
-- [ ] T037 Run the full `specs/002-studio-enhancements/quickstart.md` (US1–US9) plus the Principle I grep (no path-layout construction outside `src/storage/`) and the Principle V migration check (old DB still lists/plays).
+- [X] T035 [P] Update `README.md`: new/expanded tag fields, title-derived filenames + `YYYY/MM/DD` layout, `DEFAULT_TAG_*` env vars, and the version-display + `just bump-*` release workflow.
+- [X] T036 Extend the `just verify` offline checks to exercise `naming.slugify`, `version.app_version`, and the US1 upload parser.
+- [ ] T037 Run the full `specs/002-studio-enhancements/quickstart.md` (US1–US9) plus the Principle I grep (no path-layout construction outside `src/storage/`) and the Principle V migration check (old DB still lists/plays). _(Automated portion done: Principle I grep PASS, Principle V migration PASS, and the full offline subset — US1 parser, US2 ID3v2.4.0 roundtrip, US4 slugify, US8 app_version, US9 bump dry-run — all PASS via `just verify` + manual REPL. **Pending:** the live-API/UI stories US2 generate-and-persist, US3, US5, US6, US7 require a manual `uv run app.py` run with an `OPENAI_API_KEY`.)_
 
 ---
 
