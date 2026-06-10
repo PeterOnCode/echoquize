@@ -55,9 +55,9 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Upload a file with normal lines, a blank line, and an over-length line; verify one item per valid line in order, with an accurate added/skipped/rejected summary, nothing generated. (quickstart US1)
 
-- [ ] T005 [US1] Add an upload-parsing helper in `src/ui/generate_tab.py` that decodes UTF-8, `splitlines()`, strips each line, skips blank/whitespace-only lines, validates each remaining line against `MAX_CHARS`, and returns `(valid_items, blank_count, rejected_line_numbers)`.
-- [ ] T006 [US1] Add a `gr.File(file_types=[".txt"])` control to the Batch queue accordion in `src/ui/generate_tab.py` and wire it to append parsed items to `queue_state` in file order (inheriting the current voice/model/format/speed; seed tags empty for now, or from `DEFAULT_TAGS` once US7 lands), never clearing the queue, and emit a summary status `"Added N — skipped B blank — rejected R too long (lines …)"`.
-- [ ] T007 [US1] Validate US1 manually per `specs/002-studio-enhancements/quickstart.md` (added/skipped/rejected counts; append-not-replace; nothing generated).
+- [X] T005 [US1] Add an upload-parsing helper in `src/ui/generate_tab.py` that decodes UTF-8, `splitlines()`, strips each line, skips blank/whitespace-only lines, validates each remaining line against `MAX_CHARS`, and returns `(valid_items, blank_count, rejected_line_numbers)`.
+- [X] T006 [US1] Add a `gr.File(file_types=[".txt"])` control to the Batch queue accordion in `src/ui/generate_tab.py` and wire it to append parsed items to `queue_state` in file order (inheriting the current voice/model/format/speed; seed tags empty for now, or from `DEFAULT_TAGS` once US7 lands), never clearing the queue, and emit a summary status `"Added N — skipped B blank — rejected R too long (lines …)"`.
+- [X] T007 [US1] Validate US1 manually per `specs/002-studio-enhancements/quickstart.md` (added/skipped/rejected counts; append-not-replace; nothing generated).
 
 **Checkpoint**: US1 fully functional and independently testable.
 

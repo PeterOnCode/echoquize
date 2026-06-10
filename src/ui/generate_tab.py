@@ -140,6 +140,65 @@ def _add_to_queue(queue, text, voice, model, fmt, speed, instructions):
     return queue, _queue_view(queue), f"Queued — {len(queue)} item(s)."
 
 
+def _parse_upload(file_path: str):
+    """Read a UTF-8 .txt file → ``(valid_lines, blank_count, rejected_line_numbers)``.
+
+    Splits on newlines, trims each line, skips blank/whitespace-only lines, and
+    rejects lines longer than ``MAX_CHARS`` (line numbers are 1-based). Parsing
+    happens fully in memory before any API call, so even a large file only
+    affects queue building, not generation (FR-002, FR-004, FR-006, FR-008).
+    """
+    with open(file_path, encoding="utf-8") as fh:
+        content = fh.read()
+    valid: list[str] = []
+    blank = 0
+    rejected: list[int] = []
+    for lineno, raw in enumerate(content.splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            blank += 1
+        elif len(line) > MAX_CHARS:
+            rejected.append(lineno)
+        else:
+            valid.append(line)
+    return valid, blank, rejected
+
+
+def _upload_to_queue(file_path, queue, voice, model, fmt, speed, instructions):
+    """Append one queue item per valid line of an uploaded .txt file (US1).
+
+    Inherits the current form's voice/model/format/speed/instructions; appends to
+    the existing queue (never clears it); reports an added/skipped/rejected summary.
+    """
+    queue = list(queue or [])
+    if not file_path:
+        return queue, _queue_view(queue), "Select a .txt file to load."
+    try:
+        valid, blank, rejected = _parse_upload(file_path)
+    except UnicodeDecodeError:
+        return queue, _queue_view(queue), "❌ File must be UTF-8 plain text."
+    except OSError as exc:  # never leak a traceback to the user
+        return queue, _queue_view(queue), f"❌ Could not read the file ({type(exc).__name__})."
+
+    for line in valid:
+        queue.append(
+            {
+                "text": line, "voice": voice, "model": model, "format": fmt,
+                "speed": float(speed), "instructions": instructions,
+            }
+        )
+
+    parts = [f"Added {len(valid)}"]
+    if blank:
+        parts.append(f"skipped {blank} blank")
+    if rejected:
+        shown = ", ".join(str(n) for n in rejected[:10]) + ("…" if len(rejected) > 10 else "")
+        plural = "s" if len(rejected) != 1 else ""
+        parts.append(f"rejected {len(rejected)} too long (line{plural} {shown})")
+    status = " — ".join(parts) + f". Queue now has {len(queue)} item(s)."
+    return queue, _queue_view(queue), status
+
+
 def _remove_selected(queue, selected_index):
     queue = list(queue or [])
     if selected_index is not None and 0 <= selected_index < len(queue):
@@ -264,6 +323,10 @@ def build_generate_tab():
             queue_df = gr.Dataframe(
                 headers=QUEUE_HEADERS, interactive=False, label="Queue", wrap=True,
             )
+            upload_file = gr.File(
+                label="Upload .txt — one queue item per line (UTF-8)",
+                file_types=[".txt"], file_count="single", type="filepath",
+            )
             with gr.Row():
                 add_btn = gr.Button("Add current form to queue")
                 remove_btn = gr.Button("Remove selected")
@@ -274,6 +337,11 @@ def build_generate_tab():
         add_btn.click(
             _add_to_queue,
             inputs=[queue_state, text, voice, model, fmt, speed, instructions],
+            outputs=[queue_state, queue_df, batch_status],
+        )
+        upload_file.upload(
+            _upload_to_queue,
+            inputs=[upload_file, queue_state, voice, model, fmt, speed, instructions],
             outputs=[queue_state, queue_df, batch_status],
         )
         queue_df.select(_on_queue_select, outputs=selected_index)
