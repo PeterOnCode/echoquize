@@ -40,6 +40,9 @@ class S3Storage(StorageBackend):
     def save(self, data: bytes, filename: str) -> str:
         raise NotImplementedError(_NOT_IMPLEMENTED)
 
+    def rename(self, old_path: str, new_filename: str) -> str:
+        raise NotImplementedError(_NOT_IMPLEMENTED)
+
     def delete(self, path: str) -> None:
         raise NotImplementedError(_NOT_IMPLEMENTED)
 

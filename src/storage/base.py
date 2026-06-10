@@ -15,6 +15,11 @@ class StorageBackend(ABC):
         """Persist ``data`` under ``filename``; return the backend path/key."""
 
     @abstractmethod
+    def rename(self, old_path: str, new_filename: str) -> str:
+        """Move the object at ``old_path`` to ``new_filename`` within its current
+        folder, collision-safe; return the new backend path/key (US5)."""
+
+    @abstractmethod
     def delete(self, path: str) -> None:
         """Remove the object at ``path``. A missing object is tolerated."""
 

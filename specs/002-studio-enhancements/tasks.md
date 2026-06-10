@@ -121,10 +121,10 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Edit a saved item's filename + tags → file renamed on disk, path updated, preview/download still work; collision suffixes; empty name rejected; title edit never renames; AAC/PCM filename editable while tags skipped. (quickstart US5)
 
-- [ ] T019 [US5] Add `rename(old_path, new_filename) -> str` to the `StorageBackend` ABC in `src/storage/base.py`; implement it collision-safe within the source file's folder in `src/storage/local.py`; add `NotImplementedError` stubs in `src/storage/s3.py` and `src/storage/gdrive.py` (mirroring their `save()` stubs) per `contracts/storage-backend.md`.
-- [ ] T020 [US5] Replace the Library "Edit tags" accordion with an "Edit details" panel in `src/ui/library_tab.py`: a Filename (stem) field with the extension shown read-only, plus the full expanded tag fields; populate on row select from the record's `tag_*` columns + parsed `tags_extra` and the stem from `basename(file_path)`.
-- [ ] T021 [US5] Implement the "Edit details" save in `src/ui/library_tab.py`: if the stem changed, `slugify` it (reject empty/un-sluggable, keep original), call `storage.rename` then `update_file_path`, and report the final name; write the expanded tags via `write_tags` + `update_tags`; for AAC/PCM skip tag writing with a notice but still allow rename; never rename on a title-only edit; reload the page.
-- [ ] T022 [US5] Validate US5 manually per `specs/002-studio-enhancements/quickstart.md`.
+- [X] T019 [US5] Add `rename(old_path, new_filename) -> str` to the `StorageBackend` ABC in `src/storage/base.py`; implement it collision-safe within the source file's folder in `src/storage/local.py`; add `NotImplementedError` stubs in `src/storage/s3.py` and `src/storage/gdrive.py` (mirroring their `save()` stubs) per `contracts/storage-backend.md`.
+- [X] T020 [US5] Replace the Library "Edit tags" accordion with an "Edit details" panel in `src/ui/library_tab.py`: a Filename (stem) field with the extension shown read-only, plus the full expanded tag fields; populate on row select from the record's `tag_*` columns + parsed `tags_extra` and the stem from `basename(file_path)`.
+- [X] T021 [US5] Implement the "Edit details" save in `src/ui/library_tab.py`: if the stem changed, `slugify` it (reject empty/un-sluggable, keep original), call `storage.rename` then `update_file_path`, and report the final name; write the expanded tags via `write_tags` + `update_tags`; for AAC/PCM skip tag writing with a notice but still allow rename; never rename on a title-only edit; reload the page.
+- [X] T022 [US5] Validate US5 manually per `specs/002-studio-enhancements/quickstart.md`.
 
 **Checkpoint**: US5 functional; Library items renameable and fully re-taggable.
 

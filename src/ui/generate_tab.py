@@ -12,6 +12,9 @@ from src.naming import slugify
 from src.storage import get_storage
 from src.tags.writer import TagsNotSupportedError, write_tags
 from src.tts.client import MAX_CHARS, TTSError, generate_speech
+from src.ui.tag_fields import collect_tags as _collect_tags
+from src.ui.tag_fields import empty_tags as _empty_tags
+from src.ui.tag_fields import tags_to_fields as _tags_to_fields
 
 VOICE_CHOICES = [
     "alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova",
@@ -28,36 +31,6 @@ QUEUE_HEADERS = ["#", "Text", "Voice", "Model", "Format", "Speed"]
 # --------------------------------------------------------------------------- #
 # Single generation
 # --------------------------------------------------------------------------- #
-def _collect_tags(title, artist, album, genre, date, track, languages, comment,
-                  ct1_desc, ct1_val, ct2_desc, ct2_val,
-                  cu1_desc, cu1_val, cu2_desc, cu2_val):
-    """Build the expanded logical tag dict from the Generate-form fields (US2).
-
-    ``languages`` is a comma-separated string; custom text/URL come in fixed
-    (desc, value) pairs and are kept only when the value is non-empty.
-    """
-    def _s(v):
-        return (v or "").strip()
-
-    langs = [x.strip() for x in (languages or "").split(",") if x.strip()]
-    custom_text = [
-        {"desc": _s(d), "value": _s(v)}
-        for d, v in ((ct1_desc, ct1_val), (ct2_desc, ct2_val))
-        if _s(v)
-    ]
-    custom_url = [
-        {"desc": _s(d), "url": _s(v)}
-        for d, v in ((cu1_desc, cu1_val), (cu2_desc, cu2_val))
-        if _s(v)
-    ]
-    return {
-        "title": _s(title), "artist": _s(artist), "album": _s(album),
-        "genre": _s(genre), "comment": _s(comment),
-        "date": _s(date), "track": _s(track),
-        "languages": langs, "custom_text": custom_text, "custom_url": custom_url,
-    }
-
-
 def _apply_tags(audio, fmt, tags):
     """Tag the raw audio *bytes* (via a temp file) before they reach storage.
 
@@ -180,30 +153,6 @@ def _queue_view(queue):
         ]
         for i, q in enumerate(queue)
     ]
-
-
-def _empty_tags():
-    """A complete, empty expanded-tag dict (every queue item carries one)."""
-    return {
-        "title": "", "artist": "", "album": "", "genre": "", "comment": "",
-        "date": "", "track": "", "languages": [], "custom_text": [], "custom_url": [],
-    }
-
-
-def _tags_to_fields(tags):
-    """Expand a tag dict into the flat edit-panel field values (inverse of _collect_tags)."""
-    t = tags or _empty_tags()
-    ct = (list(t.get("custom_text") or []) + [{}, {}])[:2]
-    cu = (list(t.get("custom_url") or []) + [{}, {}])[:2]
-    return (
-        t.get("title", ""), t.get("artist", ""), t.get("album", ""), t.get("genre", ""),
-        t.get("date", ""), t.get("track", ""), ", ".join(t.get("languages") or []),
-        t.get("comment", ""),
-        ct[0].get("desc", ""), ct[0].get("value", ""),
-        ct[1].get("desc", ""), ct[1].get("value", ""),
-        cu[0].get("desc", ""), cu[0].get("url", ""),
-        cu[1].get("desc", ""), cu[1].get("url", ""),
-    )
 
 
 def _add_to_queue(queue, text, voice, model, fmt, speed, instructions,

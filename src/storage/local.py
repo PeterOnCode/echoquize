@@ -39,6 +39,20 @@ class LocalStorage(StorageBackend):
             n += 1
         return candidate
 
+    def rename(self, old_path: str, new_filename: str) -> str:
+        """Move ``old_path`` to ``new_filename`` within its folder, collision-safe.
+
+        A no-op when the name is unchanged. Raises ``FileNotFoundError`` when the
+        source is missing so the caller can surface a friendly message (US5)."""
+        src = Path(old_path)
+        if not src.exists():
+            raise FileNotFoundError(f"File not found: {old_path}")
+        if (src.parent / new_filename) == src:
+            return old_path  # unchanged
+        dest = self._unique_path(src.parent, new_filename)
+        os.replace(src, dest)  # move within the same dated folder
+        return str(dest)
+
     def delete(self, path: str) -> None:
         try:
             os.remove(path)
