@@ -27,12 +27,34 @@ QUEUE_HEADERS = ["#", "Text", "Voice", "Model", "Format", "Speed"]
 # --------------------------------------------------------------------------- #
 # Single generation
 # --------------------------------------------------------------------------- #
-def _collect_tags(title, artist, album, comment, genre, year):
-    raw = {
-        "title": title, "artist": artist, "album": album,
-        "comment": comment, "genre": genre, "year": year,
+def _collect_tags(title, artist, album, genre, date, track, languages, comment,
+                  ct1_desc, ct1_val, ct2_desc, ct2_val,
+                  cu1_desc, cu1_val, cu2_desc, cu2_val):
+    """Build the expanded logical tag dict from the Generate-form fields (US2).
+
+    ``languages`` is a comma-separated string; custom text/URL come in fixed
+    (desc, value) pairs and are kept only when the value is non-empty.
+    """
+    def _s(v):
+        return (v or "").strip()
+
+    langs = [x.strip() for x in (languages or "").split(",") if x.strip()]
+    custom_text = [
+        {"desc": _s(d), "value": _s(v)}
+        for d, v in ((ct1_desc, ct1_val), (ct2_desc, ct2_val))
+        if _s(v)
+    ]
+    custom_url = [
+        {"desc": _s(d), "url": _s(v)}
+        for d, v in ((cu1_desc, cu1_val), (cu2_desc, cu2_val))
+        if _s(v)
+    ]
+    return {
+        "title": _s(title), "artist": _s(artist), "album": _s(album),
+        "genre": _s(genre), "comment": _s(comment),
+        "date": _s(date), "track": _s(track),
+        "languages": langs, "custom_text": custom_text, "custom_url": custom_url,
     }
-    return {k: ((v or "").strip() or None) for k, v in raw.items()}
 
 
 def _apply_tags(audio, fmt, tags):
@@ -43,7 +65,12 @@ def _apply_tags(audio, fmt, tags):
     the bytes actually saved. Never raises: a tag failure leaves the audio untagged
     rather than losing the generation (Principle VII).
     """
-    if not any((v or "").strip() for v in tags.values()):
+    has_any = any((
+        tags["title"], tags["artist"], tags["album"], tags["genre"],
+        tags["comment"], tags["date"], tags["track"],
+        tags["languages"], tags["custom_text"], tags["custom_url"],
+    ))
+    if not has_any:
         return audio, "", False
     if fmt in NO_TAGS:
         return audio, f" Tags not supported for {fmt} — skipped.", False
@@ -54,7 +81,11 @@ def _apply_tags(audio, fmt, tags):
             tmp_path = tmp.name
         write_tags(tmp_path, fmt, tags)
         with open(tmp_path, "rb") as fh:
-            return fh.read(), " Tags written.", True
+            data = fh.read()
+        note = " Tags written."
+        if tags["custom_url"] and fmt in ("flac", "opus"):
+            note += f" (Custom URL isn't embedded for {fmt}.)"
+        return data, note, True
     except TagsNotSupportedError:
         return audio, f" Tags not supported for {fmt} — skipped.", False
     except Exception as exc:  # never leak a traceback to the user
@@ -67,8 +98,37 @@ def _apply_tags(audio, fmt, tags):
                 pass
 
 
+def _tag_record_fields(tags, tagged):
+    """Map the expanded tag dict to DB record fields — only when embedded.
+
+    Persisting only embedded tags avoids phantom metadata for untaggable formats.
+    """
+    if not tagged:
+        return {}
+    extra = {
+        key: value for key, value in (
+            ("languages", tags["languages"]),
+            ("custom_text", tags["custom_text"]),
+            ("custom_url", tags["custom_url"]),
+        ) if value
+    }
+    return {
+        "tag_title": tags["title"] or None,
+        "tag_artist": tags["artist"] or None,
+        "tag_album": tags["album"] or None,
+        "tag_comment": tags["comment"] or None,
+        "tag_genre": tags["genre"] or None,
+        "tag_year": tags["date"] or None,  # column reused for the recording date
+        "tag_track": tags["track"] or None,
+        "tags_extra": extra or None,
+    }
+
+
 def _on_generate(text, voice, model, fmt, speed, instructions,
-                 t_title, t_artist, t_album, t_comment, t_genre, t_year):
+                 t_title, t_artist, t_album, t_genre, t_date, t_track,
+                 t_languages, t_comment,
+                 ct1_desc, ct1_val, ct2_desc, ct2_val,
+                 cu1_desc, cu1_val, cu2_desc, cu2_val):
     """Validate, synthesize, save, tag, persist; return (preview, download, status)."""
     text = (text or "").strip()
     if not text:
@@ -76,25 +136,21 @@ def _on_generate(text, voice, model, fmt, speed, instructions,
     if len(text) > MAX_CHARS:
         return None, None, f"❌ Text exceeds {MAX_CHARS} characters (got {len(text)})."
 
-    tags = _collect_tags(t_title, t_artist, t_album, t_comment, t_genre, t_year)
+    tags = _collect_tags(t_title, t_artist, t_album, t_genre, t_date, t_track,
+                         t_languages, t_comment,
+                         ct1_desc, ct1_val, ct2_desc, ct2_val,
+                         cu1_desc, cu1_val, cu2_desc, cu2_val)
     try:
         storage = get_storage()
         audio = generate_speech(text, model, voice, fmt, float(speed), instructions)
         audio, tag_note, tagged = _apply_tags(audio, fmt, tags)  # tag bytes before saving
         path = storage.save(audio, f"{uuid.uuid4()}.{fmt}")
-        gid = insert_generation(
-            {
-                "text_input": text, "voice": voice, "model": model, "format": fmt,
-                "speed": float(speed), "file_path": path, "file_size": len(audio),
-                # persist tags only when they were actually embedded (no phantom metadata)
-                "tag_title": tags["title"] if tagged else None,
-                "tag_artist": tags["artist"] if tagged else None,
-                "tag_album": tags["album"] if tagged else None,
-                "tag_comment": tags["comment"] if tagged else None,
-                "tag_genre": tags["genre"] if tagged else None,
-                "tag_year": tags["year"] if tagged else None,
-            }
-        )
+        record = {
+            "text_input": text, "voice": voice, "model": model, "format": fmt,
+            "speed": float(speed), "file_path": path, "file_size": len(audio),
+        }
+        record.update(_tag_record_fields(tags, tagged))  # only embedded tags persist
+        gid = insert_generation(record)
         url = storage.get_url(path)  # locator for Gradio — never the raw backend path
     except TTSError as exc:
         return None, None, f"❌ {exc}"
@@ -280,7 +336,7 @@ def build_generate_tab():
                 with gr.Row():
                     fmt = gr.Dropdown(
                         label="Format", choices=FORMAT_CHOICES, value="mp3",
-                        info=("MP3/WAV use ID3 tags; FLAC/Opus use Vorbis/Opus tags. "
+                        info=("MP3/WAV use ID3v2.4.0 tags; FLAC/Opus use Vorbis/Opus tags. "
                               "PCM has no inline preview; PCM & AAC can't carry tags."),
                     )
                     speed = gr.Slider(
@@ -290,8 +346,9 @@ def build_generate_tab():
                     label="Voice instructions (gpt-4o-mini-tts only)", lines=2, visible=False
                 )
                 with gr.Accordion("Audio tags (optional)", open=False):
-                    gr.Markdown("Embedded into the file when the format supports it. "
-                                "PCM and AAC can't carry tags — they're skipped with a note.")
+                    gr.Markdown("Embedded when the format supports it. MP3/WAV use "
+                                "ID3v2.4.0; FLAC/Opus use Vorbis (custom URL skipped); "
+                                "PCM and AAC can't carry tags — skipped with a note.")
                     with gr.Row():
                         t_title = gr.Textbox(label="Title", max_lines=1)
                         t_artist = gr.Textbox(label="Artist", max_lines=1)
@@ -299,8 +356,25 @@ def build_generate_tab():
                         t_album = gr.Textbox(label="Album", max_lines=1)
                         t_genre = gr.Textbox(label="Genre", max_lines=1)
                     with gr.Row():
-                        t_year = gr.Textbox(label="Year", max_lines=1)
+                        t_date = gr.Textbox(label="Recording date (YYYY or YYYY-MM-DD)", max_lines=1)
+                        t_track = gr.Textbox(label="Track (n or n/total)", max_lines=1)
+                    with gr.Row():
+                        t_languages = gr.Textbox(
+                            label="Language(s) — ISO 639-2, comma-separated", max_lines=1)
                         t_comment = gr.Textbox(label="Comment", max_lines=1)
+                    with gr.Accordion("Custom fields (optional)", open=False):
+                        with gr.Row():
+                            ct1_desc = gr.Textbox(label="Custom text 1 — name", max_lines=1)
+                            ct1_val = gr.Textbox(label="Custom text 1 — value", max_lines=1)
+                        with gr.Row():
+                            ct2_desc = gr.Textbox(label="Custom text 2 — name", max_lines=1)
+                            ct2_val = gr.Textbox(label="Custom text 2 — value", max_lines=1)
+                        with gr.Row():
+                            cu1_desc = gr.Textbox(label="Custom URL 1 — name", max_lines=1)
+                            cu1_val = gr.Textbox(label="Custom URL 1 — URL", max_lines=1)
+                        with gr.Row():
+                            cu2_desc = gr.Textbox(label="Custom URL 2 — name", max_lines=1)
+                            cu2_val = gr.Textbox(label="Custom URL 2 — URL", max_lines=1)
                 generate_btn = gr.Button("Generate", variant="primary")
             with gr.Column():
                 audio_out = gr.Audio(label="Preview", type="filepath")
@@ -312,7 +386,10 @@ def build_generate_tab():
         gen_event = generate_btn.click(
             _on_generate,
             inputs=[text, voice, model, fmt, speed, instructions,
-                    t_title, t_artist, t_album, t_comment, t_genre, t_year],
+                    t_title, t_artist, t_album, t_genre, t_date, t_track,
+                    t_languages, t_comment,
+                    ct1_desc, ct1_val, ct2_desc, ct2_val,
+                    cu1_desc, cu1_val, cu2_desc, cu2_val],
             outputs=[audio_out, file_out, status],
         )
 

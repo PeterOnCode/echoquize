@@ -71,9 +71,9 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Generate an MP3 with the new fields; confirm ID3v2.4.0 frames in the file and that the values reappear after restart (persisted). (quickstart US2)
 
-- [ ] T008 [US2] Expand the "Audio tags" accordion in `src/ui/generate_tab.py` with the new inputs: Recording date (replaces "Year"), Track number, Language(s), and repeatable Custom text (desc/value) and Custom URL (desc/url).
-- [ ] T009 [US2] Update `_collect_tags`, `_apply_tags`, and `_on_generate` in `src/ui/generate_tab.py` to build the expanded tag dict, write it via the expanded `write_tags`, and persist the expanded columns + `tags_extra` JSON through `insert_generation` (persist only what was embedded, consistent with today's behavior).
-- [ ] T010 [US2] Validate US2 manually per `specs/002-studio-enhancements/quickstart.md` (ID3v2.4.0 frames present; FLAC maps/skip-URL; AAC/PCM skipped; values survive restart).
+- [X] T008 [US2] Expand the "Audio tags" accordion in `src/ui/generate_tab.py` with the new inputs: Recording date (replaces "Year"), Track number, Language(s), and repeatable Custom text (desc/value) and Custom URL (desc/url).
+- [X] T009 [US2] Update `_collect_tags`, `_apply_tags`, and `_on_generate` in `src/ui/generate_tab.py` to build the expanded tag dict, write it via the expanded `write_tags`, and persist the expanded columns + `tags_extra` JSON through `insert_generation` (persist only what was embedded, consistent with today's behavior).
+- [X] T010 [US2] Validate US2 manually per `specs/002-studio-enhancements/quickstart.md` (ID3v2.4.0 frames present; FLAC maps/skip-URL; AAC/PCM skipped; values survive restart).
 
 **Checkpoint**: US2 functional; expanded tags written and persisted from single generation.
 

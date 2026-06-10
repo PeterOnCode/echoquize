@@ -70,14 +70,15 @@ def _build_extra(tags: dict) -> str | None:
         langs = [langs]
     langs = [str(x).strip() for x in langs if str(x).strip()]
 
-    def _pairs(items, value_key):
+    def _pairs(items, out_key):
+        # Canonical shape (per data-model): custom_text uses "value", custom_url uses "url".
         out = []
         for item in items or []:
             if isinstance(item, dict):
                 desc = str(item.get("desc") or "").strip()
-                val = str(item.get(value_key) or item.get("value") or "").strip()
+                val = str(item.get(out_key) or item.get("value") or "").strip()
                 if val:
-                    out.append({"desc": desc, "value": val})
+                    out.append({"desc": desc, out_key: val})
         return out
 
     extra: dict = {}
