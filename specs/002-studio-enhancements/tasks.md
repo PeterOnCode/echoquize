@@ -42,8 +42,8 @@ feature-001 app already provides project init, deps, Docker, and config.
 expanded writer/DB functions accept the legacy 6-key tag dict (treating `year` as `date`) and
 default the new fields to empty/`None`, so the app stays runnable before the UI stories land.
 
-- [ ] T003 [P] Expand `src/tags/writer.py` per `contracts/tag-writer.md`: accept the expanded logical tag set (`date` generalizing `year`, `track`, `languages[]`, `custom_text[]`, `custom_url[]`); write MP3/WAV via raw ID3 frames `TIT2/TPE1/TALB/TCON/COMM/TDRC/TRCK/TLAN/TXXX/WXXX` saved explicitly as **ID3v2.4.0** (`v2_version=4`); map FLAC/Opus to Vorbis equivalents and skip `custom_url` (no equivalent); keep `TagsNotSupportedError` for aac/pcm and the full-replace semantics.
-- [ ] T004 [P] Extend `src/db/database.py` per `contracts/database.md`: add additive `tag_track` + `tags_extra` columns with an idempotent `PRAGMA table_info` → `ALTER TABLE ADD COLUMN` migration in `init_db()`; expand `insert_generation` and `update_tags` to read/write the new columns (`tags_extra` as JSON, empty→`NULL`); add `update_file_path(gid, new_path, file_size=None)`.
+- [X] T003 [P] Expand `src/tags/writer.py` per `contracts/tag-writer.md`: accept the expanded logical tag set (`date` generalizing `year`, `track`, `languages[]`, `custom_text[]`, `custom_url[]`); write MP3/WAV via raw ID3 frames `TIT2/TPE1/TALB/TCON/COMM/TDRC/TRCK/TLAN/TXXX/WXXX` saved explicitly as **ID3v2.4.0** (`v2_version=4`); map FLAC/Opus to Vorbis equivalents and skip `custom_url` (no equivalent); keep `TagsNotSupportedError` for aac/pcm and the full-replace semantics.
+- [X] T004 [P] Extend `src/db/database.py` per `contracts/database.md`: add additive `tag_track` + `tags_extra` columns with an idempotent `PRAGMA table_info` → `ALTER TABLE ADD COLUMN` migration in `init_db()`; expand `insert_generation` and `update_tags` to read/write the new columns (`tags_extra` as JSON, empty→`NULL`); add `update_file_path(gid, new_path, file_size=None)`.
 
 **Checkpoint**: Existing app still runs against an old `echoquize.db` (migration adds columns, no data loss); single-generate still saves/tags as before.
 
