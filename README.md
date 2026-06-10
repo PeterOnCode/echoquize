@@ -92,6 +92,7 @@ saved to the Library automatically.
 
 - **Voices:** `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `onyx`, `nova`, `sage`,
   `shimmer`, `verse`, `marin`, `cedar`.
+    - <https://www.openai.fm/>
 - **Models:** `tts-1` (fast), `tts-1-hd` (higher quality), `gpt-4o-mini-tts` — the last one also
   accepts free-text **voice instructions** to steer tone/style (ignored by the other two models).
 - **Formats:** `mp3`, `opus`, `aac`, `flac`, `wav`, `pcm`.
