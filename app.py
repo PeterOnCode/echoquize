@@ -6,11 +6,23 @@ import config
 from src.db.database import init_db
 from src.ui.generate_tab import build_generate_tab
 from src.ui.library_tab import build_library_tab
+from src.version import app_version
 
 
 def build_app() -> gr.Blocks:
     with gr.Blocks(title="Echoquize") as demo:
-        gr.Markdown("# 🔊 Echoquize — Text-to-Speech Studio")
+        # Show the version next to the title when known; omit it otherwise so a
+        # missing/garbled version never blocks startup (FR-025–FR-027, US8).
+        title = "# 🔊 Echoquize — Text-to-Speech Studio"
+        version = app_version()
+        if version:
+            title += (
+                f' <small style="color: var(--body-text-color-subdued);'
+                f' font-weight: normal;">v{version}</small>'
+            )
+        # Trusted, static content (version comes from our own pyproject) — render
+        # the inline style verbatim instead of having it sanitized away.
+        gr.Markdown(title, sanitize_html=False)
         with gr.Tabs():
             gen_events = build_generate_tab()
             lib = build_library_tab()

@@ -168,8 +168,8 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Load the app → version shows next to the title; if undeterminable, it is omitted and the app still launches. (quickstart US8)
 
-- [ ] T029 [US8] In `app.py`, render `f"v{app_version()}"` as unobtrusive text next to the title when `app_version()` is non-`None`, and omit it otherwise (display only — no remote check).
-- [ ] T030 [US8] Validate US8 manually per `specs/002-studio-enhancements/quickstart.md`.
+- [X] T029 [US8] In `app.py`, render `f"v{app_version()}"` as unobtrusive text next to the title when `app_version()` is non-`None`, and omit it otherwise (display only — no remote check).
+- [X] T030 [US8] Validate US8 manually per `specs/002-studio-enhancements/quickstart.md`.
 
 **Checkpoint**: US8 functional; version visible in the header.
 
