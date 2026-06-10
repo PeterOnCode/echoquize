@@ -105,9 +105,9 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Generate two items with the same title same day → `name` and `name_2`; empty/non-Latin title → UUID fallback; first file never overwritten. (quickstart US4)
 
-- [ ] T016 [US4] Make `LocalStorage.save()` collision-safe in `src/storage/local.py` per `contracts/storage-backend.md`: if the target filename exists in its folder, append `_2`/`_3`… to the stem within the 64-char cap, and return the actual stored path (never overwrite).
-- [ ] T017 [US4] In `src/ui/generate_tab.py`, compute the filename stem from the title via `naming.slugify` (fallback to `uuid4().hex` when empty) in both `_on_generate` and `_generate_all`, and pass `f"{stem}.{fmt}"` to `storage.save` (store the returned path).
-- [ ] T018 [US4] Validate US4 manually per `specs/002-studio-enhancements/quickstart.md` (slug names, `_2` suffix, UUID fallbacks, no overwrite).
+- [X] T016 [US4] Make `LocalStorage.save()` collision-safe in `src/storage/local.py` per `contracts/storage-backend.md`: if the target filename exists in its folder, append `_2`/`_3`… to the stem within the 64-char cap, and return the actual stored path (never overwrite).
+- [X] T017 [US4] In `src/ui/generate_tab.py`, compute the filename stem from the title via `naming.slugify` (fallback to `uuid4().hex` when empty) in both `_on_generate` and `_generate_all`, and pass `f"{stem}.{fmt}"` to `storage.save` (store the returned path).
+- [X] T018 [US4] Validate US4 manually per `specs/002-studio-enhancements/quickstart.md` (slug names, `_2` suffix, UUID fallbacks, no overwrite).
 
 **Checkpoint**: US4 functional; files named from titles, unique within their folder.
 

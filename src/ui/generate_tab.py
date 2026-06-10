@@ -8,6 +8,7 @@ import zipfile
 import gradio as gr
 
 from src.db.database import insert_generation
+from src.naming import slugify
 from src.storage import get_storage
 from src.tags.writer import TagsNotSupportedError, write_tags
 from src.tts.client import MAX_CHARS, TTSError, generate_speech
@@ -144,7 +145,8 @@ def _on_generate(text, voice, model, fmt, speed, instructions,
         storage = get_storage()
         audio = generate_speech(text, model, voice, fmt, float(speed), instructions)
         audio, tag_note, tagged = _apply_tags(audio, fmt, tags)  # tag bytes before saving
-        path = storage.save(audio, f"{uuid.uuid4()}.{fmt}")
+        stem = slugify(tags["title"]) or uuid.uuid4().hex  # title-derived name, UUID fallback
+        path = storage.save(audio, f"{stem}.{fmt}")
         record = {
             "text_input": text, "voice": voice, "model": model, "format": fmt,
             "speed": float(speed), "file_path": path, "file_size": len(audio),
@@ -366,7 +368,8 @@ def _generate_all(queue, progress=gr.Progress()):
                 )
                 item_tags = item.get("tags") or _empty_tags()
                 audio, _note, tagged = _apply_tags(audio, item["format"], item_tags)
-                path = storage.save(audio, f"{uuid.uuid4()}.{item['format']}")
+                stem = slugify(item_tags.get("title", "")) or uuid.uuid4().hex
+                path = storage.save(audio, f"{stem}.{item['format']}")
                 record = {
                     "text_input": item["text"], "voice": item["voice"],
                     "model": item["model"], "format": item["format"],
