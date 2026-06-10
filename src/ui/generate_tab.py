@@ -180,17 +180,49 @@ def _queue_view(queue):
     ]
 
 
-def _add_to_queue(queue, text, voice, model, fmt, speed, instructions):
+def _empty_tags():
+    """A complete, empty expanded-tag dict (every queue item carries one)."""
+    return {
+        "title": "", "artist": "", "album": "", "genre": "", "comment": "",
+        "date": "", "track": "", "languages": [], "custom_text": [], "custom_url": [],
+    }
+
+
+def _tags_to_fields(tags):
+    """Expand a tag dict into the flat edit-panel field values (inverse of _collect_tags)."""
+    t = tags or _empty_tags()
+    ct = (list(t.get("custom_text") or []) + [{}, {}])[:2]
+    cu = (list(t.get("custom_url") or []) + [{}, {}])[:2]
+    return (
+        t.get("title", ""), t.get("artist", ""), t.get("album", ""), t.get("genre", ""),
+        t.get("date", ""), t.get("track", ""), ", ".join(t.get("languages") or []),
+        t.get("comment", ""),
+        ct[0].get("desc", ""), ct[0].get("value", ""),
+        ct[1].get("desc", ""), ct[1].get("value", ""),
+        cu[0].get("desc", ""), cu[0].get("url", ""),
+        cu[1].get("desc", ""), cu[1].get("url", ""),
+    )
+
+
+def _add_to_queue(queue, text, voice, model, fmt, speed, instructions,
+                  t_title, t_artist, t_album, t_genre, t_date, t_track,
+                  t_languages, t_comment,
+                  ct1_desc, ct1_val, ct2_desc, ct2_val,
+                  cu1_desc, cu1_val, cu2_desc, cu2_val):
     queue = list(queue or [])
     text = (text or "").strip()
     if not text:
         return queue, _queue_view(queue), "❌ Enter text before adding to the queue."
     if len(text) > MAX_CHARS:
         return queue, _queue_view(queue), f"❌ Item exceeds {MAX_CHARS} characters."
+    tags = _collect_tags(t_title, t_artist, t_album, t_genre, t_date, t_track,
+                         t_languages, t_comment,
+                         ct1_desc, ct1_val, ct2_desc, ct2_val,
+                         cu1_desc, cu1_val, cu2_desc, cu2_val)
     queue.append(
         {
             "text": text, "voice": voice, "model": model, "format": fmt,
-            "speed": float(speed), "instructions": instructions,
+            "speed": float(speed), "instructions": instructions, "tags": tags,
         }
     )
     return queue, _queue_view(queue), f"Queued — {len(queue)} item(s)."
@@ -240,7 +272,7 @@ def _upload_to_queue(file_path, queue, voice, model, fmt, speed, instructions):
         queue.append(
             {
                 "text": line, "voice": voice, "model": model, "format": fmt,
-                "speed": float(speed), "instructions": instructions,
+                "speed": float(speed), "instructions": instructions, "tags": _empty_tags(),
             }
         )
 
@@ -263,8 +295,57 @@ def _remove_selected(queue, selected_index):
     return queue, _queue_view(queue), f"{len(queue)} item(s) in queue.", None
 
 
-def _on_queue_select(evt: gr.SelectData):
-    return evt.index[0]
+def _on_queue_select(queue, evt: gr.SelectData):
+    """Row select → (index, edit-panel field values…, notice) to populate the editor."""
+    idx = evt.index[0]
+    queue = queue or []
+    if not (0 <= idx < len(queue)):
+        return (None, *(gr.update() for _ in range(21)), "No item selected.")
+    item = queue[idx]
+    return (
+        idx,
+        item["text"], item["voice"], item["model"], item["format"],
+        item.get("instructions", ""),
+        *_tags_to_fields(item.get("tags")),
+        f"Editing item #{idx + 1} — change fields and click “Update item”.",
+    )
+
+
+def _update_queue_item(queue, idx, e_text, e_voice, e_model, e_fmt, e_instructions,
+                       e_title, e_artist, e_album, e_genre, e_date, e_track,
+                       e_languages, e_comment,
+                       ct1_desc, ct1_val, ct2_desc, ct2_val,
+                       cu1_desc, cu1_val, cu2_desc, cu2_val):
+    """Write edited fields back into the selected queue item (US3); speed is untouched."""
+    queue = list(queue or [])
+    if idx is None or not (0 <= idx < len(queue)):
+        return queue, _queue_view(queue), "Select a queue row to edit first."
+    text = (e_text or "").strip()
+    if not text:
+        return queue, _queue_view(queue), "❌ Item text is required — previous value kept."
+    if len(text) > MAX_CHARS:
+        return queue, _queue_view(queue), (
+            f"❌ Item exceeds {MAX_CHARS} characters — previous value kept.")
+    tags = _collect_tags(e_title, e_artist, e_album, e_genre, e_date, e_track,
+                         e_languages, e_comment,
+                         ct1_desc, ct1_val, ct2_desc, ct2_val,
+                         cu1_desc, cu1_val, cu2_desc, cu2_val)
+    queue[idx] = {
+        **queue[idx],                    # preserve speed (FR-014) and any other keys
+        "text": text, "voice": e_voice, "model": e_model, "format": e_fmt,
+        "instructions": e_instructions,  # kept even when model isn't gpt-4o-mini-tts (FR-012)
+        "tags": tags,
+    }
+    note = f"✅ Updated item #{idx + 1}."
+    has_tags = any((
+        tags["title"], tags["artist"], tags["album"], tags["genre"], tags["comment"],
+        tags["date"], tags["track"], tags["languages"], tags["custom_text"], tags["custom_url"],
+    ))
+    if has_tags and e_fmt in NO_TAGS:
+        note += f" Tags will be skipped for {e_fmt}."
+    elif tags["custom_url"] and e_fmt in ("flac", "opus"):
+        note += f" Custom URL won't embed for {e_fmt}."
+    return queue, _queue_view(queue), note
 
 
 def _generate_all(queue, progress=gr.Progress()):
@@ -283,14 +364,16 @@ def _generate_all(queue, progress=gr.Progress()):
                     item["text"], item["model"], item["voice"],
                     item["format"], item["speed"], item.get("instructions"),
                 )
+                item_tags = item.get("tags") or _empty_tags()
+                audio, _note, tagged = _apply_tags(audio, item["format"], item_tags)
                 path = storage.save(audio, f"{uuid.uuid4()}.{item['format']}")
-                insert_generation(
-                    {
-                        "text_input": item["text"], "voice": item["voice"],
-                        "model": item["model"], "format": item["format"],
-                        "speed": item["speed"], "file_path": path, "file_size": len(audio),
-                    }
-                )
+                record = {
+                    "text_input": item["text"], "voice": item["voice"],
+                    "model": item["model"], "format": item["format"],
+                    "speed": item["speed"], "file_path": path, "file_size": len(audio),
+                }
+                record.update(_tag_record_fields(item_tags, tagged))
+                insert_generation(record)
                 zf.writestr(os.path.basename(path), audio)  # bytes in-hand; no disk re-read, backend-agnostic
             except TTSError as exc:
                 errors.append(str(exc))
@@ -411,9 +494,51 @@ def build_generate_tab():
             batch_status = gr.Textbox(label="Batch status", interactive=False)
             zip_out = gr.File(label="Download all (zip)")
 
+            with gr.Accordion("Edit selected item", open=False):
+                edit_notice = gr.Markdown("Select a queue row to edit it. (Speed isn't editable here.)")
+                e_text = gr.Textbox(label="Text", lines=3, max_length=MAX_CHARS)
+                with gr.Row():
+                    e_voice = gr.Dropdown(label="Voice", choices=VOICE_CHOICES)
+                    e_model = gr.Dropdown(label="Model", choices=MODEL_CHOICES)
+                with gr.Row():
+                    e_fmt = gr.Dropdown(label="Format", choices=FORMAT_CHOICES)
+                    e_instructions = gr.Textbox(
+                        label="Voice instructions (gpt-4o-mini-tts only)", max_lines=2)
+                with gr.Row():
+                    e_title = gr.Textbox(label="Title", max_lines=1)
+                    e_artist = gr.Textbox(label="Artist", max_lines=1)
+                with gr.Row():
+                    e_album = gr.Textbox(label="Album", max_lines=1)
+                    e_genre = gr.Textbox(label="Genre", max_lines=1)
+                with gr.Row():
+                    e_date = gr.Textbox(label="Recording date (YYYY or YYYY-MM-DD)", max_lines=1)
+                    e_track = gr.Textbox(label="Track (n or n/total)", max_lines=1)
+                with gr.Row():
+                    e_languages = gr.Textbox(
+                        label="Language(s) — ISO 639-2, comma-separated", max_lines=1)
+                    e_comment = gr.Textbox(label="Comment", max_lines=1)
+                with gr.Accordion("Custom fields", open=False):
+                    with gr.Row():
+                        e_ct1_desc = gr.Textbox(label="Custom text 1 — name", max_lines=1)
+                        e_ct1_val = gr.Textbox(label="Custom text 1 — value", max_lines=1)
+                    with gr.Row():
+                        e_ct2_desc = gr.Textbox(label="Custom text 2 — name", max_lines=1)
+                        e_ct2_val = gr.Textbox(label="Custom text 2 — value", max_lines=1)
+                    with gr.Row():
+                        e_cu1_desc = gr.Textbox(label="Custom URL 1 — name", max_lines=1)
+                        e_cu1_val = gr.Textbox(label="Custom URL 1 — URL", max_lines=1)
+                    with gr.Row():
+                        e_cu2_desc = gr.Textbox(label="Custom URL 2 — name", max_lines=1)
+                        e_cu2_val = gr.Textbox(label="Custom URL 2 — URL", max_lines=1)
+                update_btn = gr.Button("Update item", variant="primary")
+
         add_btn.click(
             _add_to_queue,
-            inputs=[queue_state, text, voice, model, fmt, speed, instructions],
+            inputs=[queue_state, text, voice, model, fmt, speed, instructions,
+                    t_title, t_artist, t_album, t_genre, t_date, t_track,
+                    t_languages, t_comment,
+                    ct1_desc, ct1_val, ct2_desc, ct2_val,
+                    cu1_desc, cu1_val, cu2_desc, cu2_val],
             outputs=[queue_state, queue_df, batch_status],
         )
         upload_file.upload(
@@ -421,7 +546,24 @@ def build_generate_tab():
             inputs=[upload_file, queue_state, voice, model, fmt, speed, instructions],
             outputs=[queue_state, queue_df, batch_status],
         )
-        queue_df.select(_on_queue_select, outputs=selected_index)
+        queue_df.select(
+            _on_queue_select,
+            inputs=[queue_state],
+            outputs=[selected_index, e_text, e_voice, e_model, e_fmt, e_instructions,
+                     e_title, e_artist, e_album, e_genre, e_date, e_track,
+                     e_languages, e_comment,
+                     e_ct1_desc, e_ct1_val, e_ct2_desc, e_ct2_val,
+                     e_cu1_desc, e_cu1_val, e_cu2_desc, e_cu2_val, edit_notice],
+        )
+        update_btn.click(
+            _update_queue_item,
+            inputs=[queue_state, selected_index, e_text, e_voice, e_model, e_fmt, e_instructions,
+                    e_title, e_artist, e_album, e_genre, e_date, e_track,
+                    e_languages, e_comment,
+                    e_ct1_desc, e_ct1_val, e_ct2_desc, e_ct2_val,
+                    e_cu1_desc, e_cu1_val, e_cu2_desc, e_cu2_val],
+            outputs=[queue_state, queue_df, batch_status],
+        )
         remove_btn.click(
             _remove_selected,
             inputs=[queue_state, selected_index],

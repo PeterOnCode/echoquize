@@ -87,11 +87,11 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Add items, edit one row's fields; only that item changes; over-length text rejected; instructions retained on model change; AAC/PCM tag-skip notice; speed not editable. (quickstart US3)
 
-- [ ] T011 [US3] Capture the expanded tag set (and instructions) into queue items on "Add current form to queue" — update `_add_to_queue` in `src/ui/generate_tab.py`.
-- [ ] T012 [US3] Add an "Edit selected item" panel in `src/ui/generate_tab.py` bound to the existing `queue_df.select`/`selected_index`, loading the selected item's text/voice/model/format/instructions/tags into editable widgets.
-- [ ] T013 [US3] Implement `_update_queue_item` in `src/ui/generate_tab.py`: validate text (non-empty, ≤`MAX_CHARS`; else reject + keep prior), write edits back to `queue_state[index]`, refresh the queue view, retain instructions when model changes away from `gpt-4o-mini-tts`, show a "tags will be skipped" notice for AAC/PCM without discarding values, and leave speed unchanged.
-- [ ] T014 [US3] Update `_generate_all` in `src/ui/generate_tab.py` to apply each item's tags (and instructions) via `_apply_tags`/`write_tags` before saving, so edited per-item tags take effect.
-- [ ] T015 [US3] Validate US3 manually per `specs/002-studio-enhancements/quickstart.md`.
+- [X] T011 [US3] Capture the expanded tag set (and instructions) into queue items on "Add current form to queue" — update `_add_to_queue` in `src/ui/generate_tab.py`.
+- [X] T012 [US3] Add an "Edit selected item" panel in `src/ui/generate_tab.py` bound to the existing `queue_df.select`/`selected_index`, loading the selected item's text/voice/model/format/instructions/tags into editable widgets.
+- [X] T013 [US3] Implement `_update_queue_item` in `src/ui/generate_tab.py`: validate text (non-empty, ≤`MAX_CHARS`; else reject + keep prior), write edits back to `queue_state[index]`, refresh the queue view, retain instructions when model changes away from `gpt-4o-mini-tts`, show a "tags will be skipped" notice for AAC/PCM without discarding values, and leave speed unchanged.
+- [X] T014 [US3] Update `_generate_all` in `src/ui/generate_tab.py` to apply each item's tags (and instructions) via `_apply_tags`/`write_tags` before saving, so edited per-item tags take effect.
+- [X] T015 [US3] Validate US3 manually per `specs/002-studio-enhancements/quickstart.md`.
 
 **Checkpoint**: US3 functional; queued items fully editable and their tags applied on "Generate all".
 
