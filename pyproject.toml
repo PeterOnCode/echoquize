@@ -14,3 +14,23 @@ dependencies = [
 s3 = [
     "boto3>=1.43.26",
 ]
+
+[dependency-groups]
+dev = [
+    "bump-my-version>=1.3.0",
+]
+
+# One-command version bumping (US9). `current_version` here and `[project].version`
+# above are kept in lockstep; the file rule below is anchored to the line that
+# starts with `version = ` so it updates only the [project] field (the single
+# source of truth read by src/version.py) and never the `current_version` line.
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = true
+tag = true
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+regex = true
+search = "^version = \"{current_version}\""
+replace = "version = \"{new_version}\""

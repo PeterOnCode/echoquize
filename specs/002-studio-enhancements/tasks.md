@@ -181,10 +181,10 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: `just bump-patch` → `[project].version` and `current_version` move to `0.1.1`, a release commit + annotated tag created; header reflects the new version. (quickstart US9)
 
-- [ ] T031 [US9] Add `bump-my-version` as a dev dependency (`uv add --dev bump-my-version`) and commit the regenerated `uv.lock` (Principle II).
-- [ ] T032 [US9] Add a `[tool.bumpversion]` section to `pyproject.toml` (`current_version = "0.1.0"`, `commit = true`, `tag = true`) with a `[[tool.bumpversion.files]]` rule updating `version = "…"` in the `[project]` table, per `research.md` R7.
-- [ ] T033 [P] [US9] Add `bump-patch` / `bump-minor` / `bump-major` recipes to the `justfile` wrapping `uv run bump-my-version bump <part>`.
-- [ ] T034 [US9] Validate US9 manually per `specs/002-studio-enhancements/quickstart.md` (run in a clean tree; revert the test tag/commit afterward).
+- [X] T031 [US9] Add `bump-my-version` as a dev dependency (`uv add --dev bump-my-version`) and commit the regenerated `uv.lock` (Principle II).
+- [X] T032 [US9] Add a `[tool.bumpversion]` section to `pyproject.toml` (`current_version = "0.1.0"`, `commit = true`, `tag = true`) with a `[[tool.bumpversion.files]]` rule updating `version = "…"` in the `[project]` table, per `research.md` R7.
+- [X] T033 [P] [US9] Add `bump-patch` / `bump-minor` / `bump-major` recipes to the `justfile` wrapping `uv run bump-my-version bump <part>`.
+- [X] T034 [US9] Validate US9 manually per `specs/002-studio-enhancements/quickstart.md` (run in a clean tree; revert the test tag/commit afterward).
 
 **Checkpoint**: US9 functional; releases are one command.
 

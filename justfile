@@ -100,6 +100,20 @@ logs:
 ps:
     {{compose}} ps
 
+# --- Release (US9 — bump-my-version) --------------------------------------
+
+# Bump the patch version (0.1.0 → 0.1.1), then commit + tag. Needs a clean tree.
+bump-patch:
+    uv run bump-my-version bump patch
+
+# Bump the minor version (0.1.0 → 0.2.0), then commit + tag. Needs a clean tree.
+bump-minor:
+    uv run bump-my-version bump minor
+
+# Bump the major version (0.1.0 → 1.0.0), then commit + tag. Needs a clean tree.
+bump-major:
+    uv run bump-my-version bump major
+
 # --- Housekeeping ---------------------------------------------------------
 
 # Remove Python caches only. Does NOT touch audio/ or echoquize.db (your data).
