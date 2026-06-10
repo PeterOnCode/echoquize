@@ -82,13 +82,38 @@ are set; leave both unset for open access. Setting only one logs a startup warni
 
 ## Using the app
 
+The UI has two tabs: **Generate** and **Library**.
+
+### Generate
+
+Type or paste text, choose options, and click **Generate**. You get an inline preview (where the
+format supports it), a downloadable file, and a status line with the file size. Every generation is
+saved to the Library automatically.
+
 - **Voices:** `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `onyx`, `nova`, `sage`,
   `shimmer`, `verse`, `marin`, `cedar`.
-- **Models:** `tts-1`, `tts-1-hd`, `gpt-4o-mini-tts` (the last one also accepts free-text voice
-  *instructions*).
+- **Models:** `tts-1` (fast), `tts-1-hd` (higher quality), `gpt-4o-mini-tts` — the last one also
+  accepts free-text **voice instructions** to steer tone/style (ignored by the other two models).
 - **Formats:** `mp3`, `opus`, `aac`, `flac`, `wav`, `pcm`.
-- **Text limit:** 4096 characters **per item** (validated before any API call; batch items are each
-  checked individually, not as a combined total).
+- **Speed:** `0.25`–`4.0` (`1.0` = normal).
+- **Text limit:** 4096 characters **per item**, validated *before* any API call. Empty or
+  over-length text is rejected with a clear message.
+
+**Batch:** open the **Batch queue**, add several texts (each with its own voice/model/format/speed),
+then **Generate all** to receive every clip in a single zip. The queue is per-session and isn't
+saved — the generated files are. The 4096-character limit applies to each item, not the combined
+total.
+
+### Library
+
+Every past generation is listed **newest-first** with its creation time, voice, model, format,
+speed, a text preview, and file size. The list is **paginated** (50 per page) and stays responsive
+into the low thousands of items.
+
+- **Filter** by voice, **page** through results, and **select a row** to replay it.
+- **Delete selected** removes the record *and* its audio file.
+- **Bulk cleanup** removes many at once by date range and/or voice — after a confirmation checkbox.
+- **Edit tags** on any taggable item; changes are written into the file and persist across restarts.
 
 ### Tag support by format
 
@@ -150,8 +175,69 @@ startup.
 
 - Audio files: `AUDIO_DIR/YYYY/MM/<uuid>.<ext>` (in Docker: `./data/audio/...`).
 - Metadata: a single `generations` SQLite table at `DB_PATH` (in Docker: `./data/echoquize.db`).
+- A record is written only after its file is saved, so there are no orphan rows. Deleting an item
+  whose file was already removed elsewhere still cleans up the record without error.
+- **Concurrency:** multiple browser tabs are safe — SQLite is opened with an in-process lock, so
+  simultaneous generations don't corrupt the history.
+- Keep `DB_PATH` (and `./data`) on a **real local filesystem** — SQLite file locking misbehaves on
+  NFS/overlay mounts.
 - Generations are kept **indefinitely** — there is no auto-pruning. Reclaim space via the Library
   tab's **Bulk cleanup**, or prune `./data/audio` yourself.
+
+## Troubleshooting
+
+### App exits at startup: `ValueError: OPENAI_API_KEY is not set`
+**Cause:** A required setting is missing — the app fails fast by design rather than mid-request.
+**Solution:** Set `OPENAI_API_KEY` in `.env` (local) or inject it via `env_file`/`-e` (Docker).
+
+### Status: "Invalid API key — check your .env"
+**Cause:** The key is present but rejected by OpenAI (typo, revoked, or no TTS access).
+**Solution:** Confirm the key is valid and TTS-enabled; regenerate it if needed.
+
+### Status: "Rate limited — please retry shortly"
+**Cause:** You hit your OpenAI rate or quota limit.
+**Solution:** Wait and retry, space out batch items, or raise your plan limits.
+
+### Status: "Connection error — please check your network"
+**Cause:** The app couldn't reach the OpenAI API.
+**Solution:** Check outbound network/DNS and any proxy or firewall between the host and OpenAI.
+
+### Docker: container keeps restarting / the UI never responds
+**Cause:** Usually a startup config error (e.g. missing `OPENAI_API_KEY`) or an unwritable data dir.
+**Solution:** Read `docker compose logs`. Ensure `.env` has the key and `./data` is writable by
+uid 999 (see next entry).
+
+### Docker: `PermissionError` writing to `/app/data`
+**Cause:** The bind-mounted `./data` isn't writable by the container's non-root user (uid 999).
+**Solution:**
+```bash
+mkdir -p data && sudo chown -R 999:999 data
+```
+
+### Docker: UI unreachable from another machine
+**Cause:** `HOST` was set to `127.0.0.1`/`localhost`, which is unreachable outside the container.
+**Solution:** Keep `HOST=0.0.0.0` (the default) and reach the app via the host's address and mapped port.
+
+### Port already in use
+**Cause:** Another process holds the port (default `7860`).
+**Solution:** Set a different `PORT` in `.env` (local), or `PORT=8080 docker compose up -d` (Docker).
+
+### No inline player for a PCM file
+**Not a bug.** PCM is raw audio with no container, so it's download-only with a note. Use
+mp3/opus/flac/wav if you want inline preview.
+
+### "Tags not supported" for PCM or AAC
+**Not a bug.** PCM has no container, and OpenAI returns raw ADTS for AAC (not an M4A box mutagen can
+tag). Generation still completes; tagging is skipped with a notice.
+
+### WAV tags don't show up in my player
+**Cause:** WAV carries ID3 tags, which some players ignore.
+**Solution:** Use mp3, flac, or opus for broad tag compatibility.
+
+### Library is empty after a redeploy
+**Cause:** Data wasn't on the persistent mount, or the volume was deleted.
+**Solution:** Confirm `./data` is bind-mounted and you never ran `docker compose down -v`. Audio
+lives under `./data/audio`, history in `./data/echoquize.db`.
 
 ---
 
