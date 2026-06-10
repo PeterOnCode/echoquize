@@ -265,6 +265,35 @@ which walks each user story (US1–US5) end to end. The offline subset runs via 
 Design and governance live under [`specs/001-echoquize-tts/`](./specs/001-echoquize-tts/) and the
 project [constitution](./.specify/memory/constitution.md).
 
+## Extending the app (Spec Kit workflow)
+
+Echoquize is built with [Spec Kit](https://github.com/github/spec-kit) — spec-driven development
+where each step produces artifacts that feed the next. To **add a new feature**, start a new
+numbered spec (e.g. `specs/002-…`) and reuse the existing
+[constitution](./.specify/memory/constitution.md). Each command below is run as a `/speckit.<name>`
+slash command.
+
+| Step | Command | What it does | Output |
+|------|---------|--------------|--------|
+| 1 | `/speckit.specify` | Describe the feature in natural language → creates a feature branch + spec | `specs/00N-…/spec.md` (user stories, FRs, success criteria) |
+| 2 | `/speckit.clarify` | Asks up to 5 targeted questions and writes the answers back into the spec | updated `spec.md` |
+| 3 | `/speckit.plan` | Generates the implementation plan and design artifacts; runs the Constitution Check | `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md` |
+| 4 | `/speckit.tasks` | Produces a dependency-ordered task list | `tasks.md` |
+| 5 | `/speckit.analyze` | Cross-checks spec ↔ plan ↔ tasks for gaps and inconsistencies (non-destructive) | analysis report |
+| 6 | `/speckit.implement` | Executes the tasks in order | code + manual validation |
+
+The **minimum** path is `specify → plan → tasks → implement`; `clarify` and `analyze` are quality
+gates worth keeping for anything non-trivial.
+
+**Supporting commands**
+
+- `/speckit.constitution` — create or amend the project principles (current: `v1.0.0`). A new
+  feature's plan is checked against it.
+- `/speckit.checklist` — generate a custom quality checklist for the feature.
+- `/speckit.taskstoissues` — turn `tasks.md` into GitHub issues.
+- `/speckit.agent-context-update` — refresh the managed Spec Kit section in `CLAUDE.md` (e.g. point
+  "Active feature" at the new spec).
+
 ## License
 
 No license file is present yet. Add a `LICENSE` to declare usage terms before sharing publicly.

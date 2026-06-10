@@ -1,14 +1,14 @@
 <!-- SPECKIT START -->
-## Active feature: 001-echoquize-tts (Echoquize — Self-Hosted Text-to-Speech Studio)
+## Active feature: 002-studio-enhancements (TTS Studio Enhancements)
 
 Read the current plan and its design artifacts before working on this feature:
 
-- Plan: `specs/001-echoquize-tts/plan.md` (stack, structure, Constitution Check)
-- Spec: `specs/001-echoquize-tts/spec.md` (US1–US5, FR-001–024, SC-001–009)
-- Research: `specs/001-echoquize-tts/research.md` (resolved technical decisions D1–D13)
-- Data model: `specs/001-echoquize-tts/data-model.md`
-- Contracts: `specs/001-echoquize-tts/contracts/` (config, tts-client, storage-backend, database, tag-writer, ui)
-- Validation: `specs/001-echoquize-tts/quickstart.md`
+- Plan: `specs/002-studio-enhancements/plan.md` (stack, structure, Constitution Check)
+- Spec: `specs/002-studio-enhancements/spec.md` (US1–US9, FR-001–048, SC-001–010)
+- Research: `specs/002-studio-enhancements/research.md` (resolved technical decisions R1–R11)
+- Data model: `specs/002-studio-enhancements/data-model.md`
+- Contracts: `specs/002-studio-enhancements/contracts/` (naming, version, storage-backend, tag-writer, database, config, ui)
+- Validation: `specs/002-studio-enhancements/quickstart.md`
 
 Stack: Python 3.12 (uv), Gradio 6.x, openai SDK 2.x, python-dotenv, mutagen, SQLite; Docker
 (multi-stage uv) + Compose with a `./data` bind mount. Governed by the constitution at

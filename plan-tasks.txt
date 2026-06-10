@@ -1,0 +1,357 @@
+Cross-feature notes (read before specifying):
+- Features 3 and 4 both touch file pathing. If they ship together, the final on-disk
+  layout is AUDIO_DIR/YYYY/MM/DD/<title-slug>.<ext>, and the slug collision check in
+  feature 3 is scoped to that day folder. The descriptions below are written to be
+  consistent with that combined outcome.
+- Features 2, 7, 8, and 9 all touch the audio-tag set. The authoritative tag set is
+  the one defined in feature 7 (ID3v2.4.0); the others reference it rather than listing
+  their own field set. Feature 7 also defines tag persistence: the database is the
+  source of truth for tags (the editor reads columns, not the file), so feature 8's
+  Library editor relies on it.
+- Feature 8's manual rename reuses feature 3's slug rules and the dated folder from
+  feature 4. Feature 8 renames existing files in place on user request, which is
+  distinct from feature 3's "no bulk migration" rule for generation-time naming.
+
+---
+
+1. Feature: Populate the batch queue from an uploaded text file
+
+  In the Generate tab's Batch queue, let the user upload a plain-text (.txt, UTF-8)
+  file to fill the queue automatically instead of adding each item by hand. This
+  turns an existing document — a script, a list of phrases, lines of dialogue —
+  into many audio clips in one pass.
+
+  How it should behave:
+  - Add a file-upload control to the Batch queue area that accepts a plain-text file.
+  - On upload, the app reads the file and splits the content on newline characters.
+    Each line becomes one batch queue item; the newline is the only item separator.
+  - Items are appended to the existing queue, in the file's original line order;
+    uploading never clears or replaces items already in the queue.
+  - There is no cap on the number of lines or file size, but the UI must stay
+    responsive while loading a large file (consistent with how the Library handles
+    thousands of items).
+  - Leading/trailing whitespace on each line is trimmed. Blank or whitespace-only
+    lines are skipped — they must not create empty queue items.
+  - Each created item inherits the voice / model / format / speed currently selected
+    in the form, and stays individually editable in the queue afterward, exactly like
+    a manually added item.
+  - The existing 4096-character-per-item limit still applies per line. Lines that
+    exceed it are rejected with a clear message naming which lines were skipped, while
+    the valid lines are still added.
+  - After processing, show a summary: how many items were added, how many blank lines
+    were skipped, and how many were rejected for being too long.
+
+  Scope and constraints:
+  - Plain text only — no .docx/.pdf/.csv/.md parsing.
+  - Consistent with today's behavior, the queue is per session: the uploaded file
+    itself is not stored, only the resulting queue items. Nothing is generated until
+    the user clicks "Generate all."
+  - Errors are surfaced gracefully (clear messages, no stack traces), per the project
+    constitution.
+
+
+---
+
+2. Feature: Edit batch queue items in place, per row
+
+  In the Generate tab's Batch queue, let the user edit any item already in the queue
+  directly on its row, before generating. Today items are configured only when added;
+  this makes the queue fully editable so a user can fix a typo, change a voice, or set
+  per-item audio tags without removing and re-adding the item.
+
+  Editable per row:
+  - Text — the text to synthesize for that item.
+  - Voice — any supported voice (alloy, ash, ballad, coral, echo, fable, onyx, nova,
+    sage, shimmer, verse, marin, cedar).
+  - Model — tts-1, tts-1-hd, or gpt-4o-mini-tts.
+  - Format — mp3, opus, aac, flac, wav, or pcm.
+  - Voice instructions — free-text tone/style guidance. Only applies when the row's
+    model is gpt-4o-mini-tts; it is ignored for tts-1 and tts-1-hd.
+  - Audio tags — the supported tag set for that item (the same set defined in
+    feature 7; which tags actually embed depends on the item's format).
+
+  Speed is intentionally not part of this feature; each item keeps its existing speed.
+
+  How it should behave:
+  - Each change applies only to that one item and only affects what "Generate all"
+    produces; nothing is generated until the user clicks "Generate all."
+  - Editing the text re-validates the existing 4096-character-per-item limit; an empty
+    or over-length edit is rejected with a clear message and the previous valid value
+    is kept.
+  - Voice instructions are only sent to the API when the row's model is gpt-4o-mini-tts.
+    If the model is changed away from gpt-4o-mini-tts, any entered instructions are kept
+    but not sent (the user is not forced to delete them).
+  - Audio tags follow the existing per-format support: formats that can carry tags
+    (mp3/wav via ID3, flac via Vorbis, opus via OpusTags) embed them; formats that
+    cannot (aac, pcm) skip tagging gracefully with a notice rather than an error. If a
+    row's format is changed to a non-taggable one, the user is told its tags will be
+    skipped (entered tag values are not silently lost).
+  - The edited values are reflected immediately in the queue row so the user can see
+    the current configuration before generating.
+
+  Scope and constraints:
+  - The queue remains per session — edits live only until generation; the queue isn't
+    persisted. Generated clips and their embedded tags are saved to the Library as today.
+  - Errors are surfaced gracefully (clear messages, no stack traces), per the project
+    constitution.
+
+
+---
+
+3.   Feature: Human-readable audio filenames derived from the title tag
+
+  Today every generated audio file is named with a random UUID
+  (AUDIO_DIR/YYYY/MM/<uuid>.<ext>). Instead, name the file from the generation's
+  title tag so saved files are recognizable on disk and in downloads. The dated
+  directory layout (YYYY/MM/, or YYYY/MM/DD/ when feature 4 is included) and the
+  format-based extension are unaffected by this change — only the filename stem
+  changes.
+
+  Slug rules (applied to the title to produce the filename stem):
+  - Transliterate accented/Latin characters to their ASCII equivalents (é→e, ñ→n,
+    ü→u, etc.).
+  - Lowercase everything.
+  - Convert spaces to underscores.
+  - Remove every remaining character that is not in [a-z0-9_-].
+  - Collapse any run of separators and trim leading/trailing _ or - so the name never
+    starts or ends with a separator.
+  - Cap the stem at 64 characters (the extension is added after and is not counted in
+    the 64).
+
+  How it should behave:
+  - The filename stem is generated when the file is saved, from that generation's
+    title. In the batch queue, each item is named from its own title.
+  - Uniqueness is guaranteed: if the slug would collide with an existing file in the
+    same dated folder (YYYY/MM/DD when feature 4 is included), append a numeric suffix
+    (_2, _3, …), keeping the whole stem within the 64-character cap. A title must never
+    overwrite an existing saved file.
+  - If the title is empty, or slugifies to nothing (e.g. a non-Latin script with no
+    ASCII transliteration), fall back to a UUID so a valid, unique filename always
+    exists.
+  - The database record stores the actual saved filename/path, so the Library, preview,
+    download, delete, and tag-edit flows all keep working against the real file.
+
+  Scope and constraints:
+  - Applies to newly generated files only; existing UUID-named files are left as-is
+    (no bulk rename/migration).
+  - Errors are surfaced gracefully (clear messages, no stack traces), per the project
+    constitution.
+
+---
+
+4. Feature: Store audio under a day-level folder (YYYY/MM/DD)
+
+  Today audio files are stored under AUDIO_DIR/YYYY/MM/. Add a day-level subfolder so
+  files are stored under AUDIO_DIR/YYYY/MM/DD/ instead. This keeps each folder smaller
+  and makes files easier to locate by date on disk.
+
+  How it should behave:
+  - New audio is written to AUDIO_DIR/YYYY/MM/DD/<filename>.<ext>, where YYYY/MM/DD is
+    derived from the generation's creation timestamp in UTC (DD is the zero-padded day
+    of month), consistent with how timestamps are already stored.
+  - The same YYYY/MM/DD layout applies across every storage backend (local, s3, gdrive)
+    — it is part of the shared storage path/key convention, not specific to local disk.
+  - The database stores the actual saved path, so the Library, preview, download,
+    delete, and tag-edit flows all resolve to the correct file.
+  - Filename uniqueness is scoped to the day folder: a collision check / numeric suffix
+    applies within AUDIO_DIR/YYYY/MM/DD/.
+
+  Scope and constraints:
+  - Applies to newly generated files only; existing files under YYYY/MM/ are left in
+    place (no bulk move/migration), and the app continues to read them at their stored
+    paths.
+  - Errors are surfaced gracefully (clear messages, no stack traces), per the project
+    constitution.
+
+---
+
+5. Feature: Show the app version near the title
+
+  Display the application's version number next to the app title in the UI header
+  (e.g. "🔊 Echoquize v0.1.0"), so anyone using a deployed instance can see which
+  version they're running at a glance.
+
+  How it should behave:
+  - The version is shown near the title in the Generate/Library header, rendered as
+    part of the page so it's visible on load.
+  - The version comes from a single source of truth — the version field in
+    pyproject.toml — read at runtime (via installed package metadata, or by reading
+    pyproject.toml directly if the app is not installed as a distribution), so it never
+    has to be hand-edited in the UI and can't drift from the actual release.
+  - The format is unobtrusive (e.g. "v0.1.0" in smaller/muted text beside the title),
+    not a prominent UI element.
+
+  Scope and constraints:
+  - Display only — no version-check, update prompt, or network call to compare against
+    a remote version.
+  - If the version can't be determined for any reason, fall back gracefully (omit it or
+    show a neutral placeholder) rather than erroring at startup.
+  - Errors are surfaced gracefully, per the project constitution.
+
+---
+
+6.   Feature: Manage version bumping with bump-my-version
+
+  Adopt the bump-my-version tool (https://pypi.org/project/bump-my-version/) to bump
+  the project version with a single command instead of editing version strings by
+  hand. This pairs with showing the version in the UI: bump-my-version keeps the one
+  source of truth (the version in pyproject.toml) authoritative, and the app reads
+  that same value at runtime.
+
+  How it should behave:
+  - Add bump-my-version configuration to the project as a [tool.bumpversion] section in
+    pyproject.toml, with current_version set to the existing release (0.1.0) and a file
+    rule that updates the project version field in pyproject.toml.
+  - A maintainer can run one command to bump the major, minor, or patch part (e.g.
+    `bump-my-version bump patch`), and every configured version reference updates
+    consistently. `bump-my-version show` reports the current/next version.
+  - Because the app version is read from pyproject.toml package metadata (single source
+    of truth), a bump is automatically reflected in the UI version display without any
+    further code change.
+  - On bump, create a git commit and an annotated git tag (e.g. vX.Y.Z) for the release,
+    using bump-my-version's commit/tag integration.
+  - Expose the bump as project task-runner recipes in the justfile (e.g. a recipe per
+    part) so the workflow is discoverable alongside the other `just` recipes.
+
+  Scope and constraints:
+  - Developer/release tooling only — no change to the running app's behavior beyond the
+    version it reports.
+  - The version must stay a single source of truth (pyproject.toml); no second hardcoded
+    version string is introduced.
+
+  Reference: bump-my-version is configured via [tool.bumpversion] in pyproject.toml (or
+  .bumpversion.toml) with current_version, parse/serialize, and search/replace file
+  rules; CLI: `bump [part]`, `show`, `show-bump`, `sample-config`; it supports
+  auto-commit and tagging. Install/run via uv (e.g. `uv tool install bump-my-version`
+  or as a dev dependency).
+
+---
+
+7.  Feature: Expanded ID3v2.4.0 tag support
+
+  Extend the audio tag editor to cover the common ID3v2.4.0 text/URL frames, and write
+  MP3/WAV tags explicitly as ID3 version 2.4.0. Today the app edits six fields (title,
+  artist, album, comment, genre, year); this broadens the set and modernizes the date
+  handling. The new fields are available everywhere tags are edited — the Generate form,
+  each batch-queue item, and the Library tag editor.
+
+  Supported ID3v2.4.0 frames (MP3/WAV):
+  - TIT2  Title            (existing)
+  - TPE1  Artist           (existing)
+  - TALB  Album            (existing)
+  - TCON  Genre            (existing)
+  - COMM  Comment          (existing — retained)
+  - TDRC  Recording date/time   (replaces the year-only field; accepts a full
+                                  ID3v2.4 timestamp, e.g. 2026 or 2026-06-10, and
+                                  year-only input stays valid)
+  - TRCK  Track number     (new; supports "track" or "track/total")
+  - TLAN  Language(s)      (new; ISO 639-2 codes, one or more)
+  - TXXX  Custom text field(new; a description + value pair, one or more entries)
+  - WXXX  Custom URL field (new; a description + URL pair, one or more entries)
+
+  How it should behave:
+  - MP3 and WAV tags are written as ID3 v2.4.0 specifically (not v2.3).
+  - For FLAC and Opus, the same logical fields map to their Vorbis-comment equivalents
+    where one exists (e.g. track number, language, date, and custom key/value text);
+    fields with no clean equivalent are skipped gracefully with a notice rather than an
+    error. AAC and PCM remain unsupported and are skipped as today.
+  - Writing replaces the full tag set on each save (consistent with current behavior):
+    clearing a field removes that frame; setting it writes it.
+  - Tag values are validated lightly and bad input is rejected with a clear message
+    (no stack traces), per the project constitution. The generation still completes
+    even when tagging is skipped for an unsupported format/field.
+
+  Persistence (resolved):
+  - Tag values are stored in the database — the database is the app's source of truth
+    for tags. The Library list and the tag editor read tag values from the generations
+    row, not by re-parsing the file (the editor today populates from the tag_* columns
+    and on save writes both the file and the row). New tags must therefore be persisted,
+    or they could not be displayed or re-edited later (this is what feature 8 depends on).
+  - Single-value frames are stored as flat columns, extending the existing
+    tag_title/artist/album/comment/genre set: the existing tag_year column carries the
+    TDRC recording date/time (a year is still a valid value, so no rename is needed),
+    plus a new tag_track column (TRCK).
+  - Open-ended/multi-value frames are stored in one JSON text column (e.g. tags_extra):
+    the language list (TLAN) and the custom text (TXXX) and custom URL (WXXX) entries,
+    each kept as description/value pairs. This holds arbitrary, repeatable frames in one
+    place without a child table, consistent with the project's pragmatic single-user
+    scope.
+  - Migration is additive: ALTER TABLE ADD COLUMN for the new columns; existing rows get
+    NULL/empty and keep working unchanged — no backfill and no reading tags back out of
+    existing files.
+
+  Scope and constraints:
+  - Backward compatible: existing files and records using the original six fields keep
+    working; their year value is read/written as TDRC.
+  - Custom TXXX/WXXX entries are description-keyed, so multiple distinct custom text or
+    URL frames can coexist.
+
+
+
+
+8. Feature: Edit file details (filename + all tags) from the Library
+
+  In the Library tab, let the user edit a saved generation's details — its filename and
+  its full tag set — by selecting its row to open an edit form/panel, then saving the
+  changes back to the file and the database record.
+
+  Editable per item (via the edit form):
+  - Filename — the file's stem only (the extension is fixed by the format and is not
+    editable).
+  - All tags — the full supported tag set defined in feature 7, across every taggable
+    format. AAC/PCM carry no tags, so tag edits are skipped for them with a notice
+    (their filename is still editable).
+
+  How filename editing works (manual rename):
+  - The user types a new name; it is validated and normalized with the same slug rules
+    as feature 3 (transliterate → lowercase → spaces to underscores → strip to
+    [a-z0-9_-] → collapse/trim separators → 64-character cap).
+  - On save, the actual file is renamed on disk and the database path is updated, so
+    preview, download, delete, and tag-edit keep resolving to the real file.
+  - Uniqueness is preserved within the file's dated folder (YYYY/MM/DD per features
+    3/4): if the chosen name collides, a numeric suffix (_2, _3, …) is appended within
+    the 64-character cap, and the final saved name is reported back to the user.
+  - A name that is empty or slugifies to nothing is rejected with a clear message and
+    the existing filename is kept (manual edits are not silently replaced with a UUID).
+  - Editing the title tag does NOT auto-rename the file; the filename is controlled
+    only by this manual rename. (Feature 3 still governs the name a file is first given
+    at generation time.)
+
+  How tag editing works:
+  - Writing replaces the full tag set on save (consistent with the existing writer):
+    clearing a field removes it, setting it writes it; changes persist across restarts.
+  - This edit form supersedes today's six-field "Edit tags" action — it becomes the
+    single place to edit a saved item's tags, now covering the full feature-7 set.
+
+  Scope and constraints:
+  - Operates on already-saved Library items; it renames/retags existing files in place.
+    This is a user-initiated edit, distinct from feature 3's "no bulk migration" rule
+    for generation-time naming.
+  - Errors are surfaced gracefully (clear messages, no stack traces), per the project
+    constitution.
+
+9. Feature: Default tag values on the Generate tab
+
+  Let the Generate tab start with pre-filled default tag values, so a user who tags
+  generations the same way every time (e.g. a fixed artist/album) doesn't have to
+  retype them for each clip. The defaults populate the tag fields; the user can still
+  override or clear them per generation.
+
+  How it should behave:
+  - Default values for the tag fields (the feature-7 set, for fields where defaulting
+    makes sense — e.g. artist, album, genre, comment, language) are read from
+    configuration at startup, following the project's config-as-environment principle
+    (12-factor) — one environment variable per default tag field. Unset defaults simply
+    leave that field blank.
+  - On the Generate tab, the tag fields are pre-filled with these defaults when the form
+    loads / resets. The user can edit or clear any field before generating; the defaults
+    never force a value.
+  - The defaults also seed the per-item tags of newly added batch-queue items, which
+    remain individually editable (per feature 2).
+  - Title is not defaulted — it is per-clip and drives the filename via feature 3.
+
+  Scope and constraints:
+  - Defaults are deployment configuration (set once in the environment / .env), not an
+    in-app editable settings screen, so no new persistence surface is introduced.
+  - Missing or invalid default config falls back to blank fields rather than erroring at
+    startup, per the project constitution.
