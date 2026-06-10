@@ -28,8 +28,8 @@ implementation and validation.
 **Purpose**: Standalone, dependency-free helper modules consumed by several stories. The base
 feature-001 app already provides project init, deps, Docker, and config.
 
-- [ ] T001 [P] Create `src/naming.py` implementing `slugify(title) -> str` per `contracts/naming.md` (stdlib `unicodedata` NFKD→ASCII, lowercase, spaces→`_`, strip to `[a-z0-9_-]`, collapse/trim, ≤64-char stem; returns `""` for non-ASCII-only input). Consumed by US4, US5.
-- [ ] T002 [P] Create `src/version.py` implementing `app_version() -> str | None` per `contracts/version.md` (try `importlib.metadata.version("echoquize")`, fall back to reading `[project].version` from `pyproject.toml` via stdlib `tomllib`, return `None` on any failure — never raises). Consumed by US8.
+- [X] T001 [P] Create `src/naming.py` implementing `slugify(title) -> str` per `contracts/naming.md` (stdlib `unicodedata` NFKD→ASCII, lowercase, spaces→`_`, strip to `[a-z0-9_-]`, collapse/trim, ≤64-char stem; returns `""` for non-ASCII-only input). Consumed by US4, US5.
+- [X] T002 [P] Create `src/version.py` implementing `app_version() -> str | None` per `contracts/version.md` (try `importlib.metadata.version("echoquize")`, fall back to reading `[project].version` from `pyproject.toml` via stdlib `tomllib`, return `None` on any failure — never raises). Consumed by US8.
 
 ---
 
