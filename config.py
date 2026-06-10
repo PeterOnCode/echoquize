@@ -53,3 +53,23 @@ STORAGE_BACKEND = _get_env("STORAGE_BACKEND", "local")
 
 UI_USERNAME = _get_env("UI_USERNAME") or None
 UI_PASSWORD = _get_env("UI_PASSWORD") or None
+
+
+def _default_tags() -> dict:
+    """Optional default tag values (US7); only keys whose env var is set appear.
+
+    Pre-fills the Generate form and seeds new queue items. ``title`` is never
+    defaulted (it is per-clip and drives the filename). Never raises — a
+    missing/blank value simply contributes no key (FR-048).
+    """
+    pairs = {
+        "artist": _get_env("DEFAULT_TAG_ARTIST"),
+        "album": _get_env("DEFAULT_TAG_ALBUM"),
+        "genre": _get_env("DEFAULT_TAG_GENRE"),
+        "comment": _get_env("DEFAULT_TAG_COMMENT"),
+        "languages": _get_env("DEFAULT_TAG_LANGUAGE"),
+    }
+    return {k: v for k, v in pairs.items() if v}
+
+
+DEFAULT_TAGS = _default_tags()

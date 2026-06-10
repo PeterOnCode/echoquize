@@ -7,6 +7,7 @@ import zipfile
 
 import gradio as gr
 
+import config
 from src.db.database import insert_generation
 from src.naming import slugify
 from src.storage import get_storage
@@ -26,6 +27,17 @@ NO_PREVIEW = {"pcm"}  # raw bytes — no inline player
 NO_TAGS = {"pcm", "aac"}  # no usable tag container (FR-014)
 
 QUEUE_HEADERS = ["#", "Text", "Voice", "Model", "Format", "Speed"]
+
+
+def _default_tag_dict():
+    """Expanded tags seeded from config.DEFAULT_TAGS (title never defaulted, FR-047)."""
+    tags = _empty_tags()
+    defaults = config.DEFAULT_TAGS
+    for key in ("artist", "album", "genre", "comment"):
+        tags[key] = defaults.get(key, "")
+    lang = defaults.get("languages", "")
+    tags["languages"] = [x.strip() for x in lang.split(",") if x.strip()]
+    return tags
 
 
 # --------------------------------------------------------------------------- #
@@ -223,7 +235,8 @@ def _upload_to_queue(file_path, queue, voice, model, fmt, speed, instructions):
         queue.append(
             {
                 "text": line, "voice": voice, "model": model, "format": fmt,
-                "speed": float(speed), "instructions": instructions, "tags": _empty_tags(),
+                "speed": float(speed), "instructions": instructions,
+                "tags": _default_tag_dict(),
             }
         )
 
@@ -386,17 +399,22 @@ def build_generate_tab():
                                 "PCM and AAC can't carry tags — skipped with a note.")
                     with gr.Row():
                         t_title = gr.Textbox(label="Title", max_lines=1)
-                        t_artist = gr.Textbox(label="Artist", max_lines=1)
+                        t_artist = gr.Textbox(label="Artist", max_lines=1,
+                                              value=config.DEFAULT_TAGS.get("artist", ""))
                     with gr.Row():
-                        t_album = gr.Textbox(label="Album", max_lines=1)
-                        t_genre = gr.Textbox(label="Genre", max_lines=1)
+                        t_album = gr.Textbox(label="Album", max_lines=1,
+                                             value=config.DEFAULT_TAGS.get("album", ""))
+                        t_genre = gr.Textbox(label="Genre", max_lines=1,
+                                             value=config.DEFAULT_TAGS.get("genre", ""))
                     with gr.Row():
                         t_date = gr.Textbox(label="Recording date (YYYY or YYYY-MM-DD)", max_lines=1)
                         t_track = gr.Textbox(label="Track (n or n/total)", max_lines=1)
                     with gr.Row():
                         t_languages = gr.Textbox(
-                            label="Language(s) — ISO 639-2, comma-separated", max_lines=1)
-                        t_comment = gr.Textbox(label="Comment", max_lines=1)
+                            label="Language(s) — ISO 639-2, comma-separated", max_lines=1,
+                            value=config.DEFAULT_TAGS.get("languages", ""))
+                        t_comment = gr.Textbox(label="Comment", max_lines=1,
+                                               value=config.DEFAULT_TAGS.get("comment", ""))
                     with gr.Accordion("Custom fields (optional)", open=False):
                         with gr.Row():
                             ct1_desc = gr.Textbox(label="Custom text 1 — name", max_lines=1)

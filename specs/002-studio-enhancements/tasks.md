@@ -151,10 +151,10 @@ default the new fields to empty/`None`, so the app stays runnable before the UI 
 
 **Independent Test**: Set `DEFAULT_TAG_ARTIST`/`ALBUM`, restart → fields pre-filled; title blank; overridable; new queue items seeded; invalid value → blank, app still starts. (quickstart US7)
 
-- [ ] T025 [US7] Add `DEFAULT_TAG_ARTIST/ALBUM/GENRE/COMMENT/LANGUAGE` reads and a `DEFAULT_TAGS` mapping (only set keys present; never raises) in `config.py` per `contracts/config.md`.
-- [ ] T026 [US7] Initialize the Generate-form tag widgets' `value=` from `config.DEFAULT_TAGS` and seed new queue items' tags (manual add in `_add_to_queue` and file-upload in T006) from the same mapping in `src/ui/generate_tab.py`; never default Title.
-- [ ] T027 [P] [US7] Document the `DEFAULT_TAG_*` keys (commented, optional) in `.env.example`.
-- [ ] T028 [US7] Validate US7 manually per `specs/002-studio-enhancements/quickstart.md`.
+- [X] T025 [US7] Add `DEFAULT_TAG_ARTIST/ALBUM/GENRE/COMMENT/LANGUAGE` reads and a `DEFAULT_TAGS` mapping (only set keys present; never raises) in `config.py` per `contracts/config.md`.
+- [X] T026 [US7] Initialize the Generate-form tag widgets' `value=` from `config.DEFAULT_TAGS` and seed new queue items' tags (manual add in `_add_to_queue` and file-upload in T006) from the same mapping in `src/ui/generate_tab.py`; never default Title.
+- [X] T027 [P] [US7] Document the `DEFAULT_TAG_*` keys (commented, optional) in `.env.example`.
+- [X] T028 [US7] Validate US7 manually per `specs/002-studio-enhancements/quickstart.md`.
 
 **Checkpoint**: US7 functional; defaults pre-fill and seed without forcing values.
 
