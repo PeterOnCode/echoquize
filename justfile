@@ -24,6 +24,10 @@ env:
     @test -f .env && echo ".env exists — left untouched." \
         || (cp .env.example .env && echo "Created .env — edit it and set OPENAI_API_KEY.")
 
+# Pull secrets from Doppler into .env (OVERWRITES .env with the dev config).
+doppler-secrets-download:
+    doppler secrets download --project echoquize --config dev --no-file --format env > .env
+
 # Re-resolve and update uv.lock.
 lock:
     uv lock
