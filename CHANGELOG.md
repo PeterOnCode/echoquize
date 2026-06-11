@@ -2,6 +2,41 @@
 
 All notable changes to Echoquize are documented here.
 
+## 0.2.0 — 2026-06-11
+
+**Studio enhancements.** Richer audio tagging, a more capable batch workflow, friendlier
+file organization, and in-app editing of anything already in your library.
+
+### ✨ New Features
+
+- **Expanded audio tags** — Tag generations with title, artist, album, genre, recording
+  date, track number, language(s), and comment, plus your own custom text and URL fields.
+  Everything is written into the file and saved with the record.
+- **Edit saved items from the Library** — Rename a clip and change its tags directly from
+  the Library; the file on disk and its library record stay in sync.
+- **Editable batch queue** — Adjust the voice, model, format, speed, text, and tags of each
+  queued item on its own row before generating the batch.
+- **Build a batch from a text file** — Upload a `.txt` to populate the batch queue instead
+  of entering each item by hand.
+- **Default tags from your environment** — Pre-fill common fields like artist, album, genre,
+  and language from environment variables so you don't retype them on every generation.
+
+### 🔧 Improvements
+
+- **Recognizable filenames** — New audio files are named from the title (as a clean slug)
+  rather than an opaque id, so downloads are easy to identify.
+- **Tidier storage layout** — Audio is organized into day-level folders, keeping the library
+  directory manageable as your history grows.
+- **Version in the header** — The running app version is shown in the header, so you always
+  know which build you're on.
+
+### 🐛 Fixes
+
+- Renaming a file to a name that already exists no longer overwrites the other clip —
+  collisions are given a stable, unique name instead.
+- FLAC and Opus files now show a clear notice that custom URL tags are skipped (those formats
+  can't carry them) rather than dropping them silently.
+
 ## 0.1.0 — 2026-06-10
 
 🎉 **First release.** Echoquize is a self-hosted text-to-speech studio: turn text into

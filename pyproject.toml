@@ -1,6 +1,6 @@
 [project]
 name = "echoquize"
-version = "0.1.0"
+version = "0.2.0"
 description = "Self-hosted text-to-speech studio (OpenAI TTS + Gradio)"
 requires-python = ">=3.12"
 dependencies = [
@@ -25,7 +25,7 @@ dev = [
 # starts with `version = ` so it updates only the [project] field (the single
 # source of truth read by src/version.py) and never the `current_version` line.
 [tool.bumpversion]
-current_version = "0.1.0"
+current_version = "0.2.0"
 commit = true
 tag = true
 
