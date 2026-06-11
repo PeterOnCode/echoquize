@@ -34,9 +34,18 @@ def build_app() -> gr.Blocks:
     return demo
 
 
-def main() -> None:
+# Ensure the DB schema once on boot. Guarded by gr.NO_RELOAD so it runs for
+# `python app.py` / `uv run app.py` and the first `gradio app.py` exec, but is
+# skipped on hot-reload re-execs (the reloader flips NO_RELOAD off). See `just reload`.
+if gr.NO_RELOAD:
     init_db()
-    demo = build_app()
+
+# Built at module scope so `gradio app.py` hot reload can find this `demo` by name,
+# rebuild it on each edit, and hot-swap it into the running server.
+demo = build_app()
+
+
+def main() -> None:
     # Optional single-owner login: only enforced when BOTH credentials are set
     # (unset → open access, per FR-017). HOST stays 0.0.0.0 for container reach.
     if config.UI_USERNAME and config.UI_PASSWORD:

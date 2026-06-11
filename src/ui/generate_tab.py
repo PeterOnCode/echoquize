@@ -374,77 +374,63 @@ def build_generate_tab():
         with gr.Row():
             with gr.Column():
                 text = gr.Textbox(
-                    label="Text", lines=5, max_lines=20, max_length=MAX_CHARS,
-                    placeholder="Enter text to convert…",
+                label="Text", lines=5, max_lines=20, max_length=MAX_CHARS,
+                placeholder="Enter text to convert…",
                 )
                 counter = gr.Markdown(f"0 / {MAX_CHARS}")
+            with gr.Column():
                 with gr.Row():
                     voice = gr.Dropdown(label="Voice", choices=VOICE_CHOICES, value="alloy")
                     model = gr.Dropdown(label="Model", choices=MODEL_CHOICES, value="tts-1")
                 with gr.Row():
+                    instructions = gr.Textbox(
+                        label="Voice instructions (gpt-4o-mini-tts only)", lines=2, visible=False
+                    )
+                with gr.Row():
                     fmt = gr.Dropdown(
                         label="Format", choices=FORMAT_CHOICES, value="mp3",
                         info=("MP3/WAV use ID3v2.4.0 tags; FLAC/Opus use Vorbis/Opus tags. "
-                              "PCM has no inline preview; PCM & AAC can't carry tags."),
+                                "PCM has no inline preview; PCM & AAC can't carry tags."),
                     )
                     speed = gr.Slider(
                         label="Speed", minimum=0.25, maximum=4.0, step=0.05, value=1.0
                     )
-                instructions = gr.Textbox(
-                    label="Voice instructions (gpt-4o-mini-tts only)", lines=2, visible=False
-                )
-                with gr.Accordion("Audio tags (optional)", open=False):
-                    gr.Markdown("Embedded when the format supports it. MP3/WAV use "
-                                "ID3v2.4.0; FLAC/Opus use Vorbis (custom URL skipped); "
-                                "PCM and AAC can't carry tags — skipped with a note.")
-                    with gr.Row():
-                        t_title = gr.Textbox(label="Title", max_lines=1)
-                        t_artist = gr.Textbox(label="Artist", max_lines=1,
-                                              value=config.DEFAULT_TAGS.get("artist", ""))
-                    with gr.Row():
-                        t_album = gr.Textbox(label="Album", max_lines=1,
-                                             value=config.DEFAULT_TAGS.get("album", ""))
-                        t_genre = gr.Textbox(label="Genre", max_lines=1,
-                                             value=config.DEFAULT_TAGS.get("genre", ""))
-                    with gr.Row():
-                        t_date = gr.Textbox(label="Recording date (YYYY or YYYY-MM-DD)", max_lines=1)
-                        t_track = gr.Textbox(label="Track (n or n/total)", max_lines=1)
-                    with gr.Row():
-                        t_languages = gr.Textbox(
-                            label="Language(s) — ISO 639-2, comma-separated", max_lines=1,
-                            value=config.DEFAULT_TAGS.get("languages", ""))
-                        t_comment = gr.Textbox(label="Comment", max_lines=1,
-                                               value=config.DEFAULT_TAGS.get("comment", ""))
-                    with gr.Accordion("Custom fields (optional)", open=False):
-                        with gr.Row():
-                            ct1_desc = gr.Textbox(label="Custom text 1 — name", max_lines=1)
-                            ct1_val = gr.Textbox(label="Custom text 1 — value", max_lines=1)
-                        with gr.Row():
-                            ct2_desc = gr.Textbox(label="Custom text 2 — name", max_lines=1)
-                            ct2_val = gr.Textbox(label="Custom text 2 — value", max_lines=1)
-                        with gr.Row():
-                            cu1_desc = gr.Textbox(label="Custom URL 1 — name", max_lines=1)
-                            cu1_val = gr.Textbox(label="Custom URL 1 — URL", max_lines=1)
-                        with gr.Row():
-                            cu2_desc = gr.Textbox(label="Custom URL 2 — name", max_lines=1)
-                            cu2_val = gr.Textbox(label="Custom URL 2 — URL", max_lines=1)
-                generate_btn = gr.Button("Generate", variant="primary")
-            with gr.Column():
-                audio_out = gr.Audio(label="Preview", type="filepath")
-                file_out = gr.File(label="Download")
-                status = gr.Textbox(label="Status", interactive=False)
-
-        text.change(_char_count, inputs=text, outputs=counter)
-        model.change(_toggle_instructions, inputs=model, outputs=instructions)
-        gen_event = generate_btn.click(
-            _on_generate,
-            inputs=[text, voice, model, fmt, speed, instructions,
-                    t_title, t_artist, t_album, t_genre, t_date, t_track,
-                    t_languages, t_comment,
-                    ct1_desc, ct1_val, ct2_desc, ct2_val,
-                    cu1_desc, cu1_val, cu2_desc, cu2_val],
-            outputs=[audio_out, file_out, status],
-        )
+                
+        with gr.Accordion("Audio tags (optional)", open=False):
+            gr.Markdown("Embedded when the format supports it. MP3/WAV use "
+                        "ID3v2.4.0; FLAC/Opus use Vorbis (custom URL skipped); "
+                        "PCM and AAC can't carry tags — skipped with a note.")
+            with gr.Row():
+                t_title = gr.Textbox(label="Title", max_lines=1)
+                t_artist = gr.Textbox(label="Artist", max_lines=1,
+                                        value=config.DEFAULT_TAGS.get("artist", ""))
+            with gr.Row():
+                t_album = gr.Textbox(label="Album", max_lines=1,
+                                        value=config.DEFAULT_TAGS.get("album", ""))
+                t_genre = gr.Textbox(label="Genre", max_lines=1,
+                                        value=config.DEFAULT_TAGS.get("genre", ""))
+            with gr.Row():
+                t_date = gr.Textbox(label="Recording date (YYYY or YYYY-MM-DD)", max_lines=1)
+                t_track = gr.Textbox(label="Track (n or n/total)", max_lines=1)
+            with gr.Row():
+                t_languages = gr.Textbox(
+                    label="Language(s) — ISO 639-2, comma-separated", max_lines=1,
+                    value=config.DEFAULT_TAGS.get("languages", ""))
+                t_comment = gr.Textbox(label="Comment", max_lines=1,
+                                        value=config.DEFAULT_TAGS.get("comment", ""))
+            with gr.Accordion("Custom fields (optional)", open=False):
+                with gr.Row():
+                    ct1_desc = gr.Textbox(label="Custom text 1 — name", max_lines=1)
+                    ct1_val = gr.Textbox(label="Custom text 1 — value", max_lines=1)
+                with gr.Row():
+                    ct2_desc = gr.Textbox(label="Custom text 2 — name", max_lines=1)
+                    ct2_val = gr.Textbox(label="Custom text 2 — value", max_lines=1)
+                with gr.Row():
+                    cu1_desc = gr.Textbox(label="Custom URL 1 — name", max_lines=1)
+                    cu1_val = gr.Textbox(label="Custom URL 1 — URL", max_lines=1)
+                with gr.Row():
+                    cu2_desc = gr.Textbox(label="Custom URL 2 — name", max_lines=1)
+                    cu2_val = gr.Textbox(label="Custom URL 2 — URL", max_lines=1)
 
         # ----- Batch -----
         with gr.Accordion("Batch queue", open=False):
@@ -501,6 +487,24 @@ def build_generate_tab():
                         e_cu2_desc = gr.Textbox(label="Custom URL 2 — name", max_lines=1)
                         e_cu2_val = gr.Textbox(label="Custom URL 2 — URL", max_lines=1)
                 update_btn = gr.Button("Update item", variant="primary")
+
+        generate_btn = gr.Button("Generate", variant="primary")
+
+        audio_out = gr.Audio(label="Preview", type="filepath")
+        file_out = gr.File(label="Download")
+        status = gr.Textbox(label="Status", interactive=False)
+
+        text.change(_char_count, inputs=text, outputs=counter)
+        model.change(_toggle_instructions, inputs=model, outputs=instructions)
+        gen_event = generate_btn.click(
+            _on_generate,
+            inputs=[text, voice, model, fmt, speed, instructions,
+                    t_title, t_artist, t_album, t_genre, t_date, t_track,
+                    t_languages, t_comment,
+                    ct1_desc, ct1_val, ct2_desc, ct2_val,
+                    cu1_desc, cu1_val, cu2_desc, cu2_val],
+            outputs=[audio_out, file_out, status],
+        )
 
         add_btn.click(
             _add_to_queue,

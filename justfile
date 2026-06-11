@@ -42,11 +42,22 @@ upgrade:
 run:
     uv run app.py
 
+# Serve with Gradio hot reload — edits to app.py or src/ reload the UI live.
+reload:
+    uv run gradio app.py
+
 # Alias for run.
 dev: run
 
 # Alias for run.
 serve: run
+
+# Start this, then run the "Echoquize: attach (debugpy :5678)" launch config.
+# debugpy is pulled in ephemerally via --with (no change to pyproject/uv.lock).
+# Append --wait-for-client after --listen to pause startup until the debugger attaches.
+# Serve under a debugpy listener on :5678 for the VS Code "attach" config.
+debug:
+    uv run --with debugpy python -m debugpy --listen 5678 app.py
 
 # --- Validation (mirrors specs/001-echoquize-tts/quickstart.md) -----------
 

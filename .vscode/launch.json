@@ -1,0 +1,54 @@
+{
+    // Debug Echoquize. Both configs run app.py with the VS Code debugger attached,
+    // using the uv-managed .venv interpreter and loading .env the same way the
+    // justfile does (`set dotenv-load := true`). This is the breakpoint-capable
+    // equivalent of `uv run app.py` — which `just dev` / `just run` wrap.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Fast path: debug straight against the existing .venv (no sync).
+            "name": "Echoquize: debug app.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true
+        },
+        {
+            // Faithful to `uv run`: `uv sync` first so deps match uv.lock, then debug.
+            "name": "Echoquize: debug app.py (uv sync first)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": true,
+            "preLaunchTask": "uv sync"
+        },
+        {
+            // Attach to an app already started under a debugpy listener.
+            // Start it first with `just debug` (serves app.py on a debugpy port),
+            // then run this config to attach. Plain `just dev` has no debug port.
+            "name": "Echoquize: attach (debugpy :5678)",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "justMyCode": true,
+            // Local run → roots match. For a container, map the in-container path here.
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "${workspaceFolder}"
+                }
+            ]
+        }
+    ]
+}

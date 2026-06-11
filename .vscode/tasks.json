@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // Mirrors what `uv run` does implicitly before launching: bring the
+            // .venv in line with uv.lock. Used as a preLaunchTask by launch.json.
+            "label": "uv sync",
+            "type": "shell",
+            "command": "uv sync",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "clear": true
+            }
+        }
+    ]
+}
