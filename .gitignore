@@ -9,6 +9,9 @@
 __pycache__/
 *.pyc
 
+# Backups (e.g. .env.bak created before editing untracked config)
+*.bak
+
 # Secrets & runtime data (per spec — never commit)
 .env
 audio/

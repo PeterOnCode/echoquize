@@ -24,7 +24,11 @@ _NOT_IMPLEMENTED = (
 
 
 class S3Storage(StorageBackend):
-    """Stub for S3-compatible object storage (AWS S3, MinIO, Cloudflare R2)."""
+    """Stub for S3-compatible object storage (AWS S3, MinIO, Cloudflare R2).
+
+    When implemented, objects use the same dated key convention as local storage —
+    ``YYYY/MM/DD/<filename>`` (UTC), collision-safe within the day folder.
+    """
 
     def __init__(self) -> None:
         self.bucket = os.environ.get("S3_BUCKET")
@@ -34,6 +38,9 @@ class S3Storage(StorageBackend):
         self.boto3_available = _BOTO3_AVAILABLE
 
     def save(self, data: bytes, filename: str) -> str:
+        raise NotImplementedError(_NOT_IMPLEMENTED)
+
+    def rename(self, old_path: str, new_filename: str) -> str:
         raise NotImplementedError(_NOT_IMPLEMENTED)
 
     def delete(self, path: str) -> None:

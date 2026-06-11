@@ -14,13 +14,20 @@ _NOT_IMPLEMENTED = "Google Drive storage not yet implemented"
 
 
 class GDriveStorage(StorageBackend):
-    """Stub for Google Drive storage."""
+    """Stub for Google Drive storage.
+
+    When implemented, files use the same dated layout as local storage —
+    ``YYYY/MM/DD`` folders (UTC), collision-safe within the day folder.
+    """
 
     def __init__(self) -> None:
         self.folder_id = os.environ.get("GDRIVE_FOLDER_ID")
         self.credentials_json = os.environ.get("GDRIVE_CREDENTIALS_JSON")
 
     def save(self, data: bytes, filename: str) -> str:
+        raise NotImplementedError(_NOT_IMPLEMENTED)
+
+    def rename(self, old_path: str, new_filename: str) -> str:
         raise NotImplementedError(_NOT_IMPLEMENTED)
 
     def delete(self, path: str) -> None:

@@ -8,16 +8,21 @@ ships as a multi-stage Docker image.
 ## Features
 
 - **Generate & download** — enter text, pick a voice / model / format / speed, generate, preview
-  inline, and download the file. Every generation is saved.
-- **Batch queue** — queue multiple texts and generate them all into a single zip.
+  inline, and download the file. Files are named from the title (slugified, collision-safe). Every
+  generation is saved.
+- **Batch queue** — queue multiple texts (or bulk-load them from a `.txt` file, one per line), edit
+  any item in place, and generate them all into a single zip.
 - **Persistent library** — browse, paginate, and filter past generations; preview, delete one, or
-  bulk-clean by date/voice. Data survives restarts and redeploys.
-- **Audio tags** — set ID3/Vorbis/Opus metadata (title, artist, album, comment, genre, year) before
-  generating or edit it later; unsupported formats are skipped gracefully.
-- **Self-host friendly** — 12-factor config from the environment, optional single-owner login, and
-  durable persistence on a host-visible bind mount.
-- **Swappable storage** — local disk by default; S3 and Google Drive are ready-to-wire backends
-  selected purely by config, with no change to the rest of the app.
+  bulk-clean by date/voice. Rename a file and re-tag it from the Library. Data survives restarts and
+  redeploys.
+- **Audio tags** — set standards-based metadata (title, artist, album, genre, comment, recording
+  date, track, language, plus repeatable custom text/URL fields) before generating, or edit it later.
+  MP3/WAV are written as **ID3v2.4.0**; FLAC/Opus map to Vorbis/Opus equivalents; unsupported formats
+  are skipped gracefully. Fields can be pre-filled from `DEFAULT_TAG_*` env vars.
+- **Self-host friendly** — 12-factor config from the environment, optional single-owner login,
+  durable persistence on a host-visible bind mount, and one-command version bumping (`just bump-*`).
+- **Swappable storage** — local disk by default (organized under `YYYY/MM/DD`); S3 and Google Drive
+  are ready-to-wire backends selected purely by config, with no change to the rest of the app.
 
 ## Stack
 
@@ -51,7 +56,7 @@ This repo ships a [`justfile`](./justfile). Run `just` with no args to list ever
 just install        # uv sync
 just env            # create .env from the template (never overwrites an existing one)
 just run            # serve the UI  (aliases: just dev / just serve)
-just verify         # offline smoke checks (storage factory, DB schema, tag error path)
+just verify         # offline smoke checks (storage, DB schema, tag errors, slug/version/upload helpers)
 ```
 
 ---
@@ -64,13 +69,22 @@ locally, in Docker, and on a VPS. Copy `.env.example` to `.env` and fill it in.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | **yes** | — | OpenAI key with TTS access. App fails fast at startup if unset. |
-| `AUDIO_DIR` | no | `./audio` | Where audio files are written (under `YYYY/MM/`). |
+| `AUDIO_DIR` | no | `./audio` | Where audio files are written (under `YYYY/MM/DD`). |
 | `DB_PATH` | no | `./echoquize.db` | SQLite database file. |
 | `HOST` | no | `0.0.0.0` | Bind address. Keep `0.0.0.0` in a container. |
 | `PORT` | no | `7860` | Port the UI serves on. |
 | `STORAGE_BACKEND` | no | `local` | `local` \| `s3` \| `gdrive`. |
 | `UI_USERNAME` | no | — | Optional login username. |
 | `UI_PASSWORD` | no | — | Optional login password. |
+| `DEFAULT_TAG_ARTIST` | no | — | Pre-fills the Generate-tab Artist tag field. |
+| `DEFAULT_TAG_ALBUM` | no | — | Pre-fills the Album tag field. |
+| `DEFAULT_TAG_GENRE` | no | — | Pre-fills the Genre tag field. |
+| `DEFAULT_TAG_COMMENT` | no | — | Pre-fills the Comment tag field. |
+| `DEFAULT_TAG_LANGUAGE` | no | — | Pre-fills the Language field (comma-separated allowed, e.g. `eng,hun`). |
+
+**Default tags:** `DEFAULT_TAG_*` only pre-fill the form (and newly added queue items) — every field
+stays editable and the **Title** is never defaulted. An unset or odd value just leaves the field
+blank; it never blocks startup.
 
 **Optional login:** authentication is enforced only when **both** `UI_USERNAME` and `UI_PASSWORD`
 are set; leave both unset for open access. Setting only one logs a startup warning and stays open.
@@ -99,11 +113,18 @@ saved to the Library automatically.
 - **Speed:** `0.25`–`4.0` (`1.0` = normal).
 - **Text limit:** 4096 characters **per item**, validated *before* any API call. Empty or
   over-length text is rejected with a clear message.
+- **Filenames:** each file is named from its **Title** (lowercased, accents stripped, spaces → `_`),
+  with a `_2`, `_3`… suffix if that name is already taken that day. An empty or non-Latin title falls
+  back to a unique id, and existing files are never overwritten.
+- **Tags:** expand **Audio tags** to set the full standards-based set (title, artist, album, genre,
+  comment, recording date, track, language, and repeatable custom text/URL); non-title fields can be
+  pre-filled via `DEFAULT_TAG_*` (see [Configuration](#configuration)).
 
-**Batch:** open the **Batch queue**, add several texts (each with its own voice/model/format/speed),
-then **Generate all** to receive every clip in a single zip. The queue is per-session and isn't
-saved — the generated files are. The 4096-character limit applies to each item, not the combined
-total.
+**Batch:** open the **Batch queue**, add several texts (each with its own voice/model/format/speed/
+tags), or **bulk-load a `.txt` file** (one item per line) to append many at once. **Edit any queued
+item in place** (text, voice, model, format, instructions, tags) before clicking **Generate all** to
+receive every clip in a single zip. The queue is per-session and isn't saved — the generated files
+are. The 4096-character limit applies to each item, not the combined total.
 
 ### Library
 
@@ -114,7 +135,10 @@ into the low thousands of items.
 - **Filter** by voice, **page** through results, and **select a row** to replay it.
 - **Delete selected** removes the record *and* its audio file.
 - **Bulk cleanup** removes many at once by date range and/or voice — after a confirmation checkbox.
-- **Edit tags** on any taggable item; changes are written into the file and persist across restarts.
+- **Edit details** on any saved item — rename the file (slugified, collision-safe within its dated
+  folder) and edit its full tag set. Changes are written into the file/path and persist across
+  restarts. Editing the title does **not** rename the file; for AAC/PCM the file is still renameable
+  while tag writing is skipped with a notice.
 
 ### Tag support by format
 
@@ -160,7 +184,7 @@ docker compose logs -f            # follow logs                                 
 
 Selected by `STORAGE_BACKEND`; switching it requires **no code change**.
 
-- **`local`** (default) — writes to `AUDIO_DIR/YYYY/MM/`.
+- **`local`** (default) — writes to `AUDIO_DIR/YYYY/MM/DD/` (UTC), collision-safe within the day folder.
 - **`s3`** — S3-compatible object storage (AWS S3, MinIO, Cloudflare R2). Ready-to-wire stub today;
   install the optional dependency with `uv sync --extra s3` and finish `src/storage/s3.py`. Reads
   `S3_BUCKET`, `S3_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
@@ -174,7 +198,8 @@ startup.
 
 ## Data & persistence
 
-- Audio files: `AUDIO_DIR/YYYY/MM/<uuid>.<ext>` (in Docker: `./data/audio/...`).
+- Audio files: `AUDIO_DIR/YYYY/MM/DD/<slug>.<ext>` — named from the title, unique within the day
+  folder (in Docker: `./data/audio/...`). Files written under the older `YYYY/MM/` layout still play.
 - Metadata: a single `generations` SQLite table at `DB_PATH` (in Docker: `./data/echoquize.db`).
 - A record is written only after its file is saved, so there are no orphan rows. Deleting an item
   whose file was already removed elsewhere still cleans up the record without error.
@@ -184,6 +209,20 @@ startup.
   NFS/overlay mounts.
 - Generations are kept **indefinitely** — there is no auto-pruning. Reclaim space via the Library
   tab's **Bulk cleanup**, or prune `./data/audio` yourself.
+
+## Versioning & releases
+
+The app version (read from `[project].version` in `pyproject.toml`) is shown next to the title in
+the header; if it can't be determined, it's simply omitted and the app still starts. Cut a release
+with one command — it bumps the version, commits, and tags in one step:
+
+```bash
+just bump-patch     # 0.1.0 → 0.1.1   (also: just bump-minor, just bump-major)
+```
+
+This wraps [`bump-my-version`](https://github.com/callowayproject/bump-my-version) (a dev
+dependency). Run it on a **clean working tree**; the header reflects the new version on the next
+reload, with no code change.
 
 ## Troubleshooting
 
@@ -252,18 +291,52 @@ src/
 ├── tags/writer.py     # mutagen tag writing; TagsNotSupportedError
 ├── storage/           # StorageBackend ABC + get_storage() factory (local/s3/gdrive)
 ├── db/database.py     # SQLite init + CRUD + pagination + bulk delete
+├── naming.py          # slugify(title) → filesystem-safe filename stem
+├── version.py         # app_version() — version shown in the header
 └── ui/                # generate_tab.py (single + batch), library_tab.py
-specs/001-echoquize-tts/   # Spec Kit artifacts: spec, plan, research, contracts, quickstart
+specs/                     # Spec Kit artifacts per feature (spec, plan, research, contracts, quickstart)
 ```
 
 ## Validation
 
 There is no automated test suite by design (this is a pragmatic single-user tool). Validation is
-manual and documented in [`specs/001-echoquize-tts/quickstart.md`](./specs/001-echoquize-tts/quickstart.md),
-which walks each user story (US1–US5) end to end. The offline subset runs via `just verify`.
+manual and documented per feature in `quickstart.md`:
+[`specs/001-echoquize-tts/quickstart.md`](./specs/001-echoquize-tts/quickstart.md) (US1–US5, the core
+app) and [`specs/002-studio-enhancements/quickstart.md`](./specs/002-studio-enhancements/quickstart.md)
+(US1–US9, the studio enhancements). Each walks its user stories end to end; the offline subset (slug,
+version, upload parser, storage, DB schema, tag errors) runs via `just verify`.
 
-Design and governance live under [`specs/001-echoquize-tts/`](./specs/001-echoquize-tts/) and the
-project [constitution](./.specify/memory/constitution.md).
+Design and governance live under [`specs/`](./specs/) and the project
+[constitution](./.specify/memory/constitution.md).
+
+## Extending the app (Spec Kit workflow)
+
+Echoquize is built with [Spec Kit](https://github.com/github/spec-kit) — spec-driven development
+where each step produces artifacts that feed the next. To **add a new feature**, start a new
+numbered spec (e.g. `specs/002-…`) and reuse the existing
+[constitution](./.specify/memory/constitution.md). Each command below is run as a `/speckit.<name>`
+slash command.
+
+| Step | Command | What it does | Output |
+|------|---------|--------------|--------|
+| 1 | `/speckit.specify` | Describe the feature in natural language → creates a feature branch + spec | `specs/00N-…/spec.md` (user stories, FRs, success criteria) |
+| 2 | `/speckit.clarify` | Asks up to 5 targeted questions and writes the answers back into the spec | updated `spec.md` |
+| 3 | `/speckit.plan` | Generates the implementation plan and design artifacts; runs the Constitution Check | `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md` |
+| 4 | `/speckit.tasks` | Produces a dependency-ordered task list | `tasks.md` |
+| 5 | `/speckit.analyze` | Cross-checks spec ↔ plan ↔ tasks for gaps and inconsistencies (non-destructive) | analysis report |
+| 6 | `/speckit.implement` | Executes the tasks in order | code + manual validation |
+
+The **minimum** path is `specify → plan → tasks → implement`; `clarify` and `analyze` are quality
+gates worth keeping for anything non-trivial.
+
+**Supporting commands**
+
+- `/speckit.constitution` — create or amend the project principles (current: `v1.0.0`). A new
+  feature's plan is checked against it.
+- `/speckit.checklist` — generate a custom quality checklist for the feature.
+- `/speckit.taskstoissues` — turn `tasks.md` into GitHub issues.
+- `/speckit.agent-context-update` — refresh the managed Spec Kit section in `CLAUDE.md` (e.g. point
+  "Active feature" at the new spec).
 
 ## License
 
