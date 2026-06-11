@@ -124,13 +124,17 @@ def _save_details(selected_id, page, voice_filter, stem_input,
             tags = collect_tags(title, artist, album, genre, date, track, languages, comment,
                                 ct1_desc, ct1_val, ct2_desc, ct2_val,
                                 cu1_desc, cu1_val, cu2_desc, cu2_val)
-            status = _apply_details(selected_id, rec, stem_input, tags)
+            status, stem_input = _apply_details(selected_id, rec, stem_input, tags)
     view, info, records, page = reload_page(page, voice_filter)
-    return view, info, records, page, status
+    return view, info, records, page, stem_input, status
 
 
 def _apply_details(gid, rec, stem_input, tags):
-    """Do the rename + tag write for one record; return a friendly status string."""
+    """Do the rename + tag write for one record.
+
+    Return ``(status, stem)`` where ``stem`` is the file's actual on-disk name so
+    the UI can reflect a collision-adjusted result (e.g. ``foo`` saved as ``foo_2``)
+    and a repeat save doesn't try to rename again."""
     fmt = rec["format"]
     old_path = rec["file_path"]
     cur_stem, ext = os.path.splitext(os.path.basename(old_path))
@@ -144,13 +148,18 @@ def _apply_details(gid, rec, stem_input, tags):
         slug = slugify(desired)
         if not slug:
             msgs.append("filename has no usable characters — kept original")
+        elif slug == cur_stem:
+            pass  # normalizes to the current name — nothing to rename
         else:
             try:
                 target_path = get_storage().rename(old_path, f"{slug}{ext}")
-                update_file_path(gid, target_path)
-                msgs.append(f"renamed to {os.path.basename(target_path)}")
+                if target_path != old_path:
+                    update_file_path(gid, target_path)
+                    msgs.append(f"renamed to {os.path.basename(target_path)}")
+                else:  # requested name was taken by another file — kept the current one
+                    msgs.append(f"name in use — kept {os.path.basename(target_path)}")
             except FileNotFoundError:
-                return "❌ The file is missing — nothing changed."
+                return "❌ The file is missing — nothing changed.", cur_stem
             except NotImplementedError:
                 msgs.append("rename not supported by this storage backend")
             except Exception as exc:  # never leak a traceback
@@ -159,13 +168,17 @@ def _apply_details(gid, rec, stem_input, tags):
     try:
         write_tags(target_path, fmt, tags)
         update_tags(gid, tags, file_size=_file_size(target_path))
-        msgs.append("tags saved")
+        note = "tags saved"
+        if tags["custom_url"] and fmt in ("flac", "opus"):
+            note += f" (Custom URL not embedded for {fmt})"
+        msgs.append(note)
     except TagsNotSupportedError:
         msgs.append(f"tags skipped ({fmt} can't carry tags)")
     except Exception as exc:  # never leak a traceback
         msgs.append(f"tags not written ({type(exc).__name__})")
 
-    return "✅ " + "; ".join(msgs) + "."
+    final_stem = os.path.splitext(os.path.basename(target_path))[0]
+    return "✅ " + "; ".join(msgs) + ".", final_stem
 
 
 def _clear_tags(selected_id, page, voice_filter):
@@ -311,7 +324,7 @@ def build_library_tab():
         save_btn.click(
             _save_details,
             [selected_id, page_state, voice_filter, e_filename, *tag_fields],
-            page_outputs + [status],
+            page_outputs + [e_filename, status],
         )
         clear_tags_btn.click(
             _clear_tags,
